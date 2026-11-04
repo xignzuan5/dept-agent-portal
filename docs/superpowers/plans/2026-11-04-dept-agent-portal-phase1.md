@@ -25,7 +25,7 @@
 - 每页条目数 `PAGE_SIZE = 8`;目录缓存 `TTL = 60_000` ms(支撑「改表后新打开的门户卡 1 分钟内体现」)。
 - 用**专用飞书应用**,不复用 lark-cli 的 `cli_aa90f1abeab81cc6`:长连接为集群模式,同一应用只有一个客户端收到事件,会和 `lark-cli event consume` 抢事件。
 - 用户可见文案用中文。
-- Banner 图片:PNG,≤ 10MB、≤ 1500×3000px、高:宽 ≤ 16:9;本项目每张压到 ≤ 1MB。`img_key` 必须由**发卡片的那个应用**上传(`POST /open-apis/im/v1/images`,`image_type=message`)取得;图内不含文字。比例:品牌头图 2:1、分类主题图 4:1、运营图 3:1;通栏用负边距(见 `components/img.md`)。
+- Banner 图片:PNG,≤ 10MB、≤ 1500×3000px、高:宽 ≤ 16:9;本项目每张压到 ≤ 1MB。`img_key` 必须由**发卡片的那个应用**上传(`POST /open-apis/im/v1/images`,`image_type=message`)取得;图内不含文字。比例:品牌头图 2:1、分类主题图 3:1、运营图 3:1;通栏用负边距(见 `components/img.md`)。
 - 数字员工的链接约定为机器人 AppLink:前缀 `https://applink.feishu.cn/client/bot/open?appId=`。
 
 ## Review Focus
@@ -328,7 +328,7 @@ export function isPortalCommand(text: string): boolean; // 去掉 @ 提及后 tr
 ### Task 8: Banner 素材与大厅卡接入(品牌头图、运营位渲染)
 
 **Files:**
-- Create: `assets/banners/brand.png`(2:1)、`assets/banners/cat-agent.png`、`cat-skill.png`、`cat-kb.png`、`cat-service.png`(4:1)、`assets/banners/promo-default.png`(3:1)——由 controller 提供的 GPT 原图(1536×1024)用 PIL 居中裁切并压到 ≤ 1MB;裁切脚本 `scripts/crop-banners.py`
+- Create: `assets/banners/brand.png`(2:1)、`assets/banners/cat-agent.png`、`cat-skill.png`、`cat-kb.png`、`cat-service.png`(3:1)、`assets/banners/promo-default.png`(3:1)——由 controller 提供的 GPT 原图(1536×1024)按 controller 给的裁切清单(每张图的比例与裁切中心纵坐标)用 PIL 裁切并压到 ≤ 1MB;裁切脚本 `scripts/crop-banners.py`
 - Modify: `src/cards/banners.ts`、`src/cards/lobby.ts`
 - Test: `test/cards/banners.test.ts`、`test/cards/lobby.test.ts`
 
@@ -350,7 +350,7 @@ export function buildLobbyCard(entries: CatalogEntry[], dept: DeptInfo, extras?:
 
 大厅卡加 banner 后的块顺序:品牌头图(`banners.brand` 非空时,body 第一个元素)→ 指标 → 运营位(仅 `activePromos` 的第一个)→ 热门数字员工 → 按钮。运营位块:有 `link` 时为 `interactive_container`(open_url),内含通栏图(`imgKey ?? fallbackImgKey`)+ **加粗标题** + 灰色说明(`cus-muted`);无 `link` 时同样内容但不可点击。不传 `extras` 时输出与 Task 4 完全相同(既有测试不改)。
 
-- [ ] **Step 1:** 写 `scripts/crop-banners.py`(Python 3 + PIL,`python3 -I` 运行):读 controller 给的原图目录,按上面比例居中裁切、缩到宽 1200px、存 PNG 并压到 ≤ 1MB,输出到 `assets/banners/`。运行并确认 6 张图的尺寸与体积(`sips -g pixelWidth -g pixelHeight`、`ls -la`)。
+- [ ] **Step 1:** 写 `scripts/crop-banners.py`(Python 3 + PIL,`python3 -I` 运行):读 controller 给的原图目录与裁切清单 `assets/banners/crop-manifest.json`,按清单的比例与中心纵坐标裁切、缩到宽 1200px、存 PNG 并压到 ≤ 1MB,输出到 `assets/banners/`。运行并确认 6 张图的尺寸与体积(`sips -g pixelWidth -g pixelHeight`、`ls -la`)。
 - [ ] **Step 2: 写失败测试**:
   - banners:`activePromos keeps only promos whose window contains now, sorted by order`(含未开始、已结束、两端为 null 的用例);`promoBlock with link is clickable and opens it`;`promoBlock without link is not clickable`;`promoBlock falls back to the default image and returns null when neither exists`。
   - lobby:`brand banner is the first body element when set`;`no img when banners omitted (output equals Task 4 output)`;`shows only the first active promo`;`expired promo is not shown`;`lobby with banner and promo stays within MAX_ELEMENTS and MAX_BYTES`。
