@@ -59,9 +59,12 @@ export function parseRecords(records: RawRecord[]): { entries: CatalogEntry[]; w
 
     let link: string | null = null;
     const rawLink = readLink(f['跳转链接']);
-    if (rawLink) {
-      if (/^https?:\/\//i.test(rawLink)) link = rawLink;
-      else warnings.push(`记录 ${id} 的跳转链接不是 http(s),已忽略`);
+    if (!rawLink) {
+      warnings.push(`记录 ${id} 缺少跳转链接`);
+    } else if (/^https?:\/\//i.test(rawLink)) {
+      link = rawLink;
+    } else {
+      warnings.push(`记录 ${id} 的跳转链接不是 http(s),已忽略`);
     }
 
     entries.push({

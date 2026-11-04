@@ -68,6 +68,14 @@ describe('parseRecords', () => {
     expect(warnings.some((w) => w.includes('rec1'))).toBe(true);
   });
 
+  it('warns when 跳转链接 is missing but keeps the entry', () => {
+    const { entries, warnings } = parseRecords([full({ 跳转链接: undefined })]);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].link).toBeNull();
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain('rec1');
+  });
+
   it('sorts by category order, then 排序, then 名称', () => {
     const mk = (id: string, 类型: string, 名称: string, 排序?: number): RawRecord => ({
       record_id: id,
