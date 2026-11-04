@@ -1,0 +1,24 @@
+{
+  "name": "dept-agent-portal",
+  "version": "1.0.0",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "dev": "tsx src/bot/main.ts",
+    "lobby": "tsx scripts/send-lobby.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "type": "module",
+  "dependencies": {
+    "@larksuiteoapi/node-sdk": "^1.76.0",
+    "dotenv": "^18.0.9"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}
