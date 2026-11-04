@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { buildLobbyCard } from '../../src/cards/lobby.js';
 import type { BannerKeys, Promo } from '../../src/cards/banners.js';
 import { cardBytes, countElements, MAX_BYTES, MAX_ELEMENTS } from '../../src/cards/budget.js';
+import { readFileSync } from 'node:fs';
+import { FIXTURE_DEPT, FIXTURE_ENTRIES } from './__fixtures__/lobby-input.js';
 import type { CatalogEntry } from '../../src/catalog/types.js';
 
 const dept = { name: '智能平台部', intro: '找到能帮上忙的数字员工', routerLink: null as string | null };
@@ -156,5 +158,52 @@ describe('buildLobbyCard banners and promo', () => {
     const c = buildLobbyCard(many, { ...dept, routerLink: 'https://example.com/r' }, { banners, promos: [mkPromo()], now: 1 });
     expect(countElements(c)).toBeLessThanOrEqual(MAX_ELEMENTS);
     expect(cardBytes(c)).toBeLessThanOrEqual(MAX_BYTES);
+  });
+
+  const usedColors = (c: any) => new Set(JSON.stringify({ h: c.header, b: c.body }).match(/cus-[a-z-]+/g) ?? []);
+  const checkTokens = (c: any, bothWays: boolean) => {
+    const defined = Object.keys(c.config.style.color);
+    const used = usedColors(c);
+    for (const u of used) expect(defined).toContain(u);
+    if (bothWays) for (const d of defined) expect(used.has(d)).toBe(true);
+    for (const t of JSON.stringify(c.body).match(/"text_size":"([a-z-]+)"/g) ?? []) {
+      expect(Object.keys(c.config.style.text_size)).toContain(t.split('"')[3]);
+    }
+  };
+
+  it('tokens are consistent with banners and a linked promo', () => {
+    const c = buildLobbyCard(entries(), dept, { banners, promos: [mkPromo()], now: 1 }) as any;
+    expect(JSON.stringify(c.body)).toContain('"tag":"img"');
+    checkTokens(c, true);
+  });
+
+  it('referenced tokens are defined with banners and an unlinked promo', () => {
+    const c = buildLobbyCard(entries(), dept, { banners, promos: [mkPromo({ link: null })], now: 1 }) as any;
+    expect(JSON.stringify(c.body)).toContain('img_promo_default');
+    checkTokens(c, false);
+  });
+
+  it('stress: long promo text and heavy hot agents stay within budget', () => {
+    const heavy = Array.from({ length: 4 }, (_, i) =>
+      e({ hot: true, summary: '长'.repeat(200), tags: Array.from({ length: 10 }, (_, k) => `标签${i}-${k}`) }),
+    );
+    const c = buildLobbyCard(heavy, { ...dept, routerLink: 'https://example.com/r' }, {
+      banners,
+      promos: [mkPromo({ title: '题'.repeat(200), subtitle: '述'.repeat(500) })],
+      now: 1,
+    });
+    expect(json(c)).toContain('题'.repeat(200));
+    expect(countElements(c)).toBeLessThanOrEqual(MAX_ELEMENTS);
+    expect(cardBytes(c)).toBeLessThanOrEqual(MAX_BYTES);
+  });
+});
+
+describe('buildLobbyCard Task 4 pinned output', () => {
+  const pinned = readFileSync(new URL('./__fixtures__/lobby-task4.json', import.meta.url), 'utf8');
+  it('no extras equals the Task 4 (ca9db53) output exactly', () => {
+    expect(json(buildLobbyCard(FIXTURE_ENTRIES, FIXTURE_DEPT))).toBe(pinned);
+  });
+  it('empty extras equals the Task 4 output exactly', () => {
+    expect(json(buildLobbyCard(FIXTURE_ENTRIES, FIXTURE_DEPT, {}))).toBe(pinned);
   });
 });
