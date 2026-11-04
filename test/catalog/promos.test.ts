@@ -153,4 +153,34 @@ describe('createPromoSource', () => {
     t = 50;
     expect((await s.get()).map((p) => p.id)).toEqual(['old']);
   });
+
+  it('a resolveImage that never settles yields imgKey null after imageTimeoutMs and calls onError', async () => {
+    const onError = vi.fn();
+    const s = createPromoSource({
+      fetchAll: async () => [withImg('a', 'T1')],
+      resolveImage: () => new Promise<string>(() => {}),
+      ttlMs: 10,
+      imageTimeoutMs: 20,
+      onError,
+    });
+    expect((await s.get()).map((p) => p.imgKey)).toEqual([null]);
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect((onError.mock.calls[0][0] as Error).message).toContain('超时');
+  });
+
+  it('a timed-out token is retried on the next refresh', async () => {
+    let calls = 0;
+    let t = 0;
+    const s = createPromoSource({
+      fetchAll: async () => [withImg('a', 'T1')],
+      resolveImage: () => (++calls === 1 ? new Promise<string>(() => {}) : Promise.resolve('img_ok')),
+      ttlMs: 10,
+      now: () => t,
+      imageTimeoutMs: 20,
+    });
+    expect((await s.get())[0].imgKey).toBeNull();
+    t = 100;
+    expect((await s.get())[0].imgKey).toBe('img_ok');
+    expect(calls).toBe(2);
+  });
 });

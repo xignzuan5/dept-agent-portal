@@ -104,6 +104,8 @@ export function createPromoSource(opts: {
   ttlMs: number;
   now?: () => number;
   maxWaitMs?: number;
+  /** Hard cap per image resolve (default 2000ms); on expiry the promo gets imgKey null and the token is retried later. */
+  imageTimeoutMs?: number;
   onWarnings?: (warnings: string[]) => void;
   onError?: (err: unknown) => void;
 }): { get(): Promise<Promo[]> } {
@@ -114,7 +116,19 @@ export function createPromoSource(opts: {
   function resolve(token: string): Promise<string> {
     let p = images.get(token);
     if (!p) {
-      p = opts.resolveImage(token);
+      const timeoutMs = opts.imageTimeoutMs ?? 2000;
+      let timer: NodeJS.Timeout | undefined;
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`图片解析超时(${timeoutMs}ms)`)), timeoutMs);
+        timer.unref();
+      });
+      let work: Promise<string>;
+      try {
+        work = Promise.resolve(opts.resolveImage(token));
+      } catch (e) {
+        work = Promise.reject(e);
+      }
+      p = Promise.race([work, timeout]).finally(() => clearTimeout(timer));
       images.set(token, p);
       p.catch(() => images.delete(token));
     }

@@ -8,6 +8,7 @@
     "test": "vitest run",
     "dev": "tsx src/bot/main.ts",
     "lobby": "tsx scripts/send-lobby.ts",
+    "banners": "tsx scripts/upload-banners.ts",
     "typecheck": "tsc --noEmit"
   },
   "type": "module",
