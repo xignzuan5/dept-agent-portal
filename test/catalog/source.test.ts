@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createCatalogSource, CatalogUnavailableError } from '../../src/catalog/source.js';
+import { createCatalogSource, CatalogUnavailableError, baseFetcher } from '../../src/catalog/source.js';
 import type { RawRecord } from '../../src/catalog/types.js';
 
 const rec = (name: string): RawRecord => ({
@@ -145,5 +145,36 @@ describe('createCatalogSource', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('baseFetcher', () => {
+  const item = (id: string) => ({ record_id: id, fields: { 名称: id } });
+  const fakeClient = (list: ReturnType<typeof vi.fn>) =>
+    ({ bitable: { v1: { appTableRecord: { list } } } }) as unknown as Parameters<typeof baseFetcher>[0];
+
+  it('follows page_token until has_more is false and concatenates pages', async () => {
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce({ code: 0, data: { items: [item('a'), item('b')], has_more: true, page_token: 'p2' } })
+      .mockResolvedValueOnce({ code: 0, data: { items: [item('c')], has_more: false } });
+    const out = await baseFetcher(fakeClient(list), 'app1', 'tbl1')();
+    expect(out).toEqual([item('a'), item('b'), item('c')]);
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(list.mock.calls[0][0]).toEqual({
+      path: { app_token: 'app1', table_id: 'tbl1' },
+      params: { page_size: 500, page_token: undefined },
+    });
+    expect(list.mock.calls[1][0].params).toEqual({ page_size: 500, page_token: 'p2' });
+  });
+
+  it('handles an empty table', async () => {
+    const list = vi.fn().mockResolvedValue({ code: 0, data: { has_more: false } });
+    expect(await baseFetcher(fakeClient(list), 'a', 't')()).toEqual([]);
+  });
+
+  it('throws on a non-zero code', async () => {
+    const list = vi.fn().mockResolvedValue({ code: 1254003, msg: 'bad' });
+    await expect(baseFetcher(fakeClient(list), 'a', 't')()).rejects.toThrow(/1254003/);
   });
 });

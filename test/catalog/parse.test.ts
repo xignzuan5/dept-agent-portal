@@ -11,7 +11,7 @@ const full = (over: Record<string, unknown> = {}): RawRecord => ({
     详细说明: '每周五汇总团队周报\n并发送',
     标签: ['效率', '周报'],
     负责人: [{ id: 'ou_a', name: 'A' }, { id: 'ou_b' }],
-    跳转链接: { link: 'https://example.com/x', text: '打开' },
+    跳转链接: { link: 'https://applink.feishu.cn/client/bot/open?appId=cli_x', text: '打开' },
     排序: 3,
     热门: true,
     上架: true,
@@ -32,7 +32,7 @@ describe('parseRecords', () => {
         detail: '每周五汇总团队周报\n并发送',
         tags: ['效率', '周报'],
         ownerOpenIds: ['ou_a', 'ou_b'],
-        link: 'https://example.com/x',
+        link: 'https://applink.feishu.cn/client/bot/open?appId=cli_x',
         order: 3,
         hot: true,
       },
@@ -74,6 +74,24 @@ describe('parseRecords', () => {
     expect(entries[0].link).toBeNull();
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain('rec1');
+  });
+
+  it('warns when an agent link is not a bot AppLink but keeps the entry', () => {
+    const { entries, warnings } = parseRecords([
+      full({ 跳转链接: { link: 'https://example.com/x', text: '打开' } }),
+    ]);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].link).toBe('https://example.com/x');
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toBe('记录 rec1 的数字员工链接不是机器人 AppLink');
+  });
+
+  it('does not warn for plain https links on non-agent entries', () => {
+    const { entries, warnings } = parseRecords([
+      full({ 类型: 'Skill', 跳转链接: { link: 'https://example.com/x', text: '打开' } }),
+    ]);
+    expect(entries[0].link).toBe('https://example.com/x');
+    expect(warnings).toEqual([]);
   });
 
   it('sorts by category order, then 排序, then 名称', () => {

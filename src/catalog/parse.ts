@@ -2,6 +2,7 @@ import { CATEGORIES, CATEGORY_LABEL } from './types.js';
 import type { CatalogEntry, Category, RawRecord } from './types.js';
 
 const DEFAULT_ORDER = 9999;
+const BOT_APPLINK_PREFIX = 'https://applink.feishu.cn/client/bot/open?appId=';
 
 const CATEGORY_BY_LABEL = new Map<string, Category>(
   CATEGORIES.map((c) => [CATEGORY_LABEL[c], c]),
@@ -63,6 +64,9 @@ export function parseRecords(records: RawRecord[]): { entries: CatalogEntry[]; w
       warnings.push(`记录 ${id} 缺少跳转链接`);
     } else if (/^https?:\/\//i.test(rawLink)) {
       link = rawLink;
+      if (category === 'agent' && !rawLink.startsWith(BOT_APPLINK_PREFIX)) {
+        warnings.push(`记录 ${id} 的数字员工链接不是机器人 AppLink`);
+      }
     } else {
       warnings.push(`记录 ${id} 的跳转链接不是 http(s),已忽略`);
     }

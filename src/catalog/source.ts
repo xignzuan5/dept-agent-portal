@@ -1,3 +1,4 @@
+import type * as lark from '@larksuiteoapi/node-sdk';
 import { parseRecords } from './parse.js';
 import type { CatalogEntry, RawRecord } from './types.js';
 
@@ -78,5 +79,31 @@ export function createCatalogSource(opts: {
         clearTimeout(timer);
       }
     },
+  };
+}
+
+/** Reads every record of a Base table, following pagination (page_size 500). */
+export function baseFetcher(
+  client: lark.Client,
+  appToken: string,
+  tableId: string,
+): () => Promise<RawRecord[]> {
+  return async () => {
+    const out: RawRecord[] = [];
+    let pageToken: string | undefined;
+    do {
+      const res = await client.bitable.v1.appTableRecord.list({
+        path: { app_token: appToken, table_id: tableId },
+        params: { page_size: 500, page_token: pageToken },
+      });
+      if (res.code !== undefined && res.code !== 0) {
+        throw new Error(`读取目录多维表格失败:code=${res.code} msg=${res.msg ?? ''}`);
+      }
+      for (const item of res.data?.items ?? []) {
+        out.push({ record_id: item.record_id ?? '', fields: item.fields as Record<string, unknown> });
+      }
+      pageToken = res.data?.has_more ? res.data.page_token : undefined;
+    } while (pageToken);
+    return out;
   };
 }
