@@ -3,11 +3,11 @@
   "output_width": 1200,
   "max_bytes": 1048576,
   "images": [
-    { "src": "brand-raw.png",       "out": "brand.png",         "ratio": [2, 1], "center_y": 512 },
-    { "src": "cat-agent-raw.png",   "out": "cat-agent.png",     "ratio": [3, 1], "center_y": 495 },
-    { "src": "cat-skill-raw.png",   "out": "cat-skill.png",     "ratio": [3, 1], "center_y": 515 },
-    { "src": "cat-kb-raw.png",      "out": "cat-kb.png",        "ratio": [3, 1], "center_y": 515 },
-    { "src": "cat-service-raw.png", "out": "cat-service.png",   "ratio": [3, 1], "center_y": 515 },
-    { "src": "promo-new-raw.png",   "out": "promo-default.png", "ratio": [3, 1], "center_y": 525 }
+    { "src": "brand-raw.png",       "out": "brand.png",         "ratio": [2, 1], "center_y": 528 },
+    { "src": "cat-agent-raw.png",   "out": "cat-agent.png",     "ratio": [3, 1], "center_y": 505 },
+    { "src": "cat-skill-raw.png",   "out": "cat-skill.png",     "ratio": [3, 1], "center_y": 500 },
+    { "src": "cat-kb-raw.png",      "out": "cat-kb.png",        "ratio": [3, 1], "center_y": 497 },
+    { "src": "cat-service-raw.png", "out": "cat-service.png",   "ratio": [3, 1], "center_y": 530 },
+    { "src": "promo-raw.png",       "out": "promo-default.png", "ratio": [3, 1], "center_y": 527 }
   ]
 }
