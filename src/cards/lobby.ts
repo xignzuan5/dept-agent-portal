@@ -1,4 +1,5 @@
 import { CATEGORIES, CATEGORY_LABEL, type CatalogEntry } from '../catalog/types.js';
+import { activePromos, bannerImg, promoBlock, type BannerKeys, type Promo } from './banners.js';
 import { cardConfig } from './theme.js';
 import { entryTile } from './tiles.js';
 
@@ -6,6 +7,12 @@ export interface DeptInfo {
   name: string;
   intro: string;
   routerLink: string | null;
+}
+
+export interface LobbyExtras {
+  banners?: BannerKeys;
+  promos?: Promo[];
+  now?: number;
 }
 
 const HOT_LIMIT = 4;
@@ -78,12 +85,17 @@ function actions(dept: DeptInfo): object {
   };
 }
 
-export function buildLobbyCard(entries: CatalogEntry[], dept: DeptInfo): object {
+export function buildLobbyCard(entries: CatalogEntry[], dept: DeptInfo, extras?: LobbyExtras): object {
   const agentCount = entries.filter((e) => e.category === 'agent').length;
   const skillCount = entries.filter((e) => e.category === 'skill').length;
   const hot = pickHotAgents(entries);
 
-  const elements: object[] = [metrics(entries)];
+  const elements: object[] = [];
+  if (extras?.banners?.brand) elements.push(bannerImg(extras.banners.brand, `${dept.name}数字员工`));
+  elements.push(metrics(entries));
+  const promo = activePromos(extras?.promos ?? [], extras?.now ?? Date.now())[0];
+  const promoEl = promo ? promoBlock(promo, extras?.banners?.promoDefault ?? null) : null;
+  if (promoEl) elements.push(promoEl);
   if (hot.length > 0) {
     elements.push({
       tag: 'column_set',

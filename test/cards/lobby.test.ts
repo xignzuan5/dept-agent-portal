@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildLobbyCard } from '../../src/cards/lobby.js';
+import type { BannerKeys, Promo } from '../../src/cards/banners.js';
 import { cardBytes, countElements, MAX_BYTES, MAX_ELEMENTS } from '../../src/cards/budget.js';
 import type { CatalogEntry } from '../../src/catalog/types.js';
 
@@ -93,5 +94,67 @@ describe('buildLobbyCard', () => {
       expect(['caption', 'body']).toContain(name);
       expect(Object.keys(c.config.style.text_size)).toContain(name);
     }
+  });
+});
+
+describe('buildLobbyCard banners and promo', () => {
+  const banners: BannerKeys = {
+    brand: 'img_brand',
+    category: { agent: null, skill: null, kb: null, service: null },
+    promoDefault: 'img_promo_default',
+  };
+  const mkPromo = (over: Partial<Promo> = {}): Promo => ({
+    id: 'p1', title: '促销一', subtitle: '说明一', link: 'https://example.com/1', imgKey: null,
+    start: null, end: null, order: 1, ...over,
+  });
+  const fixed = [e({ hot: true }), e({ category: 'skill' })];
+  const entries = () => fixed;
+
+  it('brand banner is the first body element when set', () => {
+    const c = buildLobbyCard(entries(), dept, { banners }) as any;
+    const first = c.body.elements[0];
+    expect(first.tag).toBe('img');
+    expect(first.img_key).toBe('img_brand');
+  });
+
+  it('no img when banners omitted (output equals Task 4 output)', () => {
+    const base = json(buildLobbyCard(entries(), dept));
+    expect(base).not.toContain('"tag":"img"');
+    expect(json(buildLobbyCard(entries(), dept, {}))).toBe(base);
+    expect(json(buildLobbyCard(entries(), dept, { promos: [mkPromo()], now: 1 }))).toBe(base);
+  });
+
+  it('places promo after metrics and before hot agents', () => {
+    const c = buildLobbyCard(entries(), dept, { banners, promos: [mkPromo()], now: 1 }) as any;
+    const tags = c.body.elements.map((x: any) => x.tag);
+    expect(tags[0]).toBe('img');
+    expect(tags[1]).toBe('column_set');
+    expect(tags[2]).toBe('interactive_container');
+    expect(c.body.elements[2].elements[0].img_key).toBe('img_promo_default');
+  });
+
+  it('shows only the first active promo', () => {
+    const s = json(
+      buildLobbyCard(entries(), dept, {
+        banners,
+        promos: [mkPromo({ id: 'b', title: '第二个', order: 2 }), mkPromo({ id: 'a', title: '第一个', order: 1 })],
+        now: 1,
+      }),
+    );
+    expect(s).toContain('第一个');
+    expect(s).not.toContain('第二个');
+  });
+
+  it('expired promo is not shown', () => {
+    const s = json(buildLobbyCard(entries(), dept, { banners, promos: [mkPromo({ end: 5 })], now: 5 }));
+    expect(s).not.toContain('促销一');
+    expect(s).not.toContain('https://example.com/1');
+  });
+
+  it('lobby with banner and promo stays within MAX_ELEMENTS and MAX_BYTES', () => {
+    const many = Array.from({ length: 12 }, () => e({ hot: true }));
+    const c = buildLobbyCard(many, { ...dept, routerLink: 'https://example.com/r' }, { banners, promos: [mkPromo()], now: 1 });
+    expect(countElements(c)).toBeLessThanOrEqual(MAX_ELEMENTS);
+    expect(cardBytes(c)).toBeLessThanOrEqual(MAX_BYTES);
   });
 });
