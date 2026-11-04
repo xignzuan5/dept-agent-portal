@@ -1,4 +1,5 @@
 import type * as lark from '@larksuiteoapi/node-sdk';
+import { createCachedSource } from './cache.js';
 import { parseRecords } from './parse.js';
 import type { CatalogEntry, RawRecord } from './types.js';
 
@@ -37,49 +38,21 @@ export function createCatalogSource(opts: {
   onWarnings?: (warnings: string[]) => void;
   onError?: (err: unknown) => void;
 }): CatalogSource {
-  const now = opts.now ?? Date.now;
-  const maxWaitMs = opts.maxWaitMs ?? 800;
   const onWarnings = opts.onWarnings ?? (() => {});
-  const onError = opts.onError ?? (() => {});
-  let cached: CatalogEntry[] | null = null;
-  let fetchedAt = 0;
-  let inflight: Promise<CatalogEntry[]> | null = null;
-
-  async function refresh(): Promise<CatalogEntry[]> {
-    try {
+  return createCachedSource(
+    async () => {
       const { entries, warnings } = parseRecords(await opts.fetchAll());
-      cached = entries;
-      fetchedAt = now();
       onWarnings(warnings);
       return entries;
-    } catch (err) {
-      onError(err);
-      if (cached) return cached; // fetchedAt untouched => still expired => retry next get()
-      throw new CatalogUnavailableError('目录暂不可用', { cause: err });
-    }
-  }
-
-  return {
-    async get() {
-      if (cached && now() - fetchedAt < opts.ttlMs) return cached;
-      inflight ??= refresh().finally(() => {
-        inflight = null;
-      });
-      const p = inflight;
-      const stale = cached;
-      if (!stale) return p; // no cached data: must wait (rejection handled by callers)
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      const timeout = new Promise<CatalogEntry[]>((resolve) => {
-        timer = setTimeout(() => resolve(stale), maxWaitMs);
-      });
-      try {
-        // p never rejects here: refresh() returns cached when cached is set.
-        return await Promise.race([p, timeout]);
-      } finally {
-        clearTimeout(timer);
-      }
     },
-  };
+    {
+      ttlMs: opts.ttlMs,
+      now: opts.now,
+      maxWaitMs: opts.maxWaitMs,
+      onError: opts.onError,
+      makeError: (cause) => new CatalogUnavailableError('目录暂不可用', { cause }),
+    },
+  );
 }
 
 /** Reads every record of a Base table, following pagination (page_size 500). */

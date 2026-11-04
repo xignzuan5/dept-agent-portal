@@ -9,7 +9,7 @@ const CATEGORY_BY_LABEL = new Map<string, Category>(
 );
 
 /** Text field: plain string or an array of `{text}` segments. */
-function readText(v: unknown): string {
+export function readText(v: unknown): string {
   if (typeof v === 'string') return v.trim();
   if (Array.isArray(v)) {
     return v
