@@ -391,3 +391,36 @@ export function createPromoSource(opts: {
 - [ ] **Step 5:** 实现 `loadBannerKeys`、`parsePromoRecords`、`createPromoSource`,以及真实的 `resolveImage`:`GET /open-apis/drive/v1/medias/:file_token/download` 下载附件 → `POST /open-apis/im/v1/images` 上传得 img_key。
 - [ ] **Step 6:** Run `npx vitest run test/catalog/promos.test.ts` — Expected: PASS;`INTEGRATION=1 npx vitest run test/catalog/promos.integration.test.ts` 读真实「运营位」表,Expected:只返回生效中的那 1 条。
 - [ ] **Step 7:** Commit:`git add scripts src test data .env.example && git commit -m "feat: promo table, banner upload and keys"`
+
+---
+
+### Task 10: 销售场景内容(示例目录、运营位、部门信息)
+
+> 2026-11-04 追加:部门是科技公司的销售前端(非技术),用户为销售同事 + 其他部门。见 spec「部门与用户」。
+
+**Files:**
+- Modify: `data/seed-catalog.json`、`.env.example`(DEPT_NAME / DEPT_INTRO 给出示例值注释)
+- Test: `test/catalog/source.integration.test.ts`(期望值随种子变化,仍从种子文件推导)
+
+**Interfaces:** 无新接口;种子构成与 Task 3 Step 2 相同(≥ 6 数字员工其中 2 个热门、≥ 5 Skill 其中 1 个详细说明 ≥ 1500 字、2 知识库、2 团队服务、1 条缺跳转链接、1 条上架=false;负责人用真实 open_id;数字员工链接用机器人 AppLink 占位)。
+
+内容要求:全部换成销售一线场景,文案用业务语言、不出现技术术语;一句话简介写清「帮销售解决什么」。参考条目——数字员工:客户画像助手、拜访准备助手、报价单助手、方案标书助手、竞品对比助手、销售日报助手;Skill:拜访纪要整理、客户邮件撰写、商机阶段判断、产品话术生成、合同条款速查、招投标文件解读;知识库:产品与报价手册、成功案例库;团队服务:售前技术支持(含 POC 申请)、商务与报价审批。部门信息:`DEPT_NAME=销售前端`、`DEPT_INTRO=销售的 AI 助手团队 · 找销售支持的一站式入口`。
+
+- [ ] **Step 1:** 重写 `data/seed-catalog.json`(构成同上)。
+- [ ] **Step 2:** 用 lark-cli(用户身份)把「能力目录」表现有记录全部删除(只删本项目种子写入的记录),再按新种子写入;核对条数。
+- [ ] **Step 3:** 「运营位」表:把生效中的那条改为标题「新上线:报价单助手」、说明「填客户和产品,3 分钟生成一份合规报价单」、跳转链接为报价单助手的 AppLink;已过期那条改为「双十一冲刺周」。
+- [ ] **Step 4:** `.env` / `.env.example` 写入 DEPT_NAME、DEPT_INTRO。
+- [ ] **Step 5:** `npm test`、`npm run typecheck` 全绿(集成测试仍只在 INTEGRATION=1 时运行)。
+- [ ] **Step 6:** Commit:`git add data test .env.example && git commit -m "feat: sales-frontline seed content"`
+
+---
+
+### Task 11: 换成销售主题 banner 并预览
+
+**Files:**
+- Modify: `assets/banners/*.png`、`assets/banners/crop-manifest.json`(新原图由 controller 提供,含新的裁切中心)
+
+- [ ] **Step 1:** 用 `scripts/crop-banners.py <新原图目录>` 按新清单裁切,覆盖 `assets/banners/` 下 6 张图;逐张 Read 确认主体完整、≤ 1MB。
+- [ ] **Step 2:** `npm test` 全绿(测试不依赖图片内容)。
+- [ ] **Step 3:** 预览:用 lark-cli 上传 6 张新图拿 img_key(只用于预览),用 `data/seed-catalog.json` 经 `parseRecords` 得到的条目 + `DEPT_NAME/DEPT_INTRO` + 运营位「新上线:报价单助手」,构造大厅卡、门户卡(数字员工页、知识库页)发到用户私聊,记录 message_id。
+- [ ] **Step 4:** Commit:`git add assets && git commit -m "feat: sales-themed banners"`
