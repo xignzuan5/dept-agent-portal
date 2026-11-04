@@ -50,4 +50,100 @@ describe('createCatalogSource', () => {
     const s = createCatalogSource({ fetchAll: async () => { throw new Error('boom'); }, ttlMs: 60_000 });
     await expect(s.get()).rejects.toBeInstanceOf(CatalogUnavailableError);
   });
+
+  it('retries on the next get after a failed refetch', async () => {
+    const fetchAll = vi.fn<() => Promise<RawRecord[]>>()
+      .mockResolvedValueOnce([rec('a')])
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce([rec('b')]);
+    let t = 0;
+    const s = createCatalogSource({ fetchAll, ttlMs: 60_000, now: () => t });
+    const first = await s.get();
+    t = 61_000;
+    expect(await s.get()).toEqual(first);
+    const third = await s.get();
+    expect(fetchAll).toHaveBeenCalledTimes(3);
+    expect(third[0].name).toBe('b');
+  });
+
+  it('calls onWarnings with parse warnings after a successful fetch', async () => {
+    const noLink = { record_id: 'x', fields: { 名称: 'x', 类型: '数字员工', 上架: true } } as RawRecord;
+    const onWarnings = vi.fn();
+    const s = createCatalogSource({ fetchAll: async () => [noLink], ttlMs: 60_000, onWarnings });
+    await s.get();
+    expect(onWarnings).toHaveBeenCalledTimes(1);
+    expect(onWarnings.mock.calls[0][0]).toHaveLength(1);
+    expect(onWarnings.mock.calls[0][0][0]).toContain('x');
+  });
+
+  it('a failed first fetch is not cached: the next get retries and succeeds', async () => {
+    const fetchAll = vi.fn<() => Promise<RawRecord[]>>()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce([rec('a')]);
+    const s = createCatalogSource({ fetchAll, ttlMs: 60_000 });
+    await expect(s.get()).rejects.toBeInstanceOf(CatalogUnavailableError);
+    expect(await s.get()).toHaveLength(1);
+    expect(fetchAll).toHaveBeenCalledTimes(2);
+  });
+
+  it('a failure during a shared in-flight fetch rejects all concurrent callers', async () => {
+    const fetchAll = vi.fn(async (): Promise<RawRecord[]> => { throw new Error('boom'); });
+    const s = createCatalogSource({ fetchAll, ttlMs: 60_000 });
+    const results = await Promise.allSettled([s.get(), s.get(), s.get()]);
+    for (const r of results) {
+      expect(r.status).toBe('rejected');
+      expect((r as PromiseRejectedResult).reason).toBeInstanceOf(CatalogUnavailableError);
+    }
+    expect(fetchAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns stale entries when a refresh exceeds maxWaitMs, and the background refresh later updates the cache', async () => {
+    vi.useFakeTimers();
+    try {
+      let release!: (r: RawRecord[]) => void;
+      const fetchAll = vi.fn<() => Promise<RawRecord[]>>()
+        .mockResolvedValueOnce([rec('a')])
+        .mockImplementationOnce(() => new Promise<RawRecord[]>((res) => { release = res; }));
+      let t = 0;
+      const s = createCatalogSource({ fetchAll, ttlMs: 60_000, now: () => t, maxWaitMs: 800 });
+      const first = await s.get();
+      t = 61_000;
+      const pending = s.get();
+      await vi.advanceTimersByTimeAsync(800);
+      expect(await pending).toEqual(first);
+      release([rec('b')]);
+      await vi.advanceTimersByTimeAsync(0);
+      const later = await s.get();
+      expect(later[0].name).toBe('b');
+      expect(fetchAll).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('calls onError when a refetch fails, including a late background failure', async () => {
+    vi.useFakeTimers();
+    try {
+      let fail!: (e: Error) => void;
+      const fetchAll = vi.fn<() => Promise<RawRecord[]>>()
+        .mockResolvedValueOnce([rec('a')])
+        .mockRejectedValueOnce(new Error('quick'))
+        .mockImplementationOnce(() => new Promise<RawRecord[]>((_, rej) => { fail = rej; }));
+      let t = 0;
+      const onError = vi.fn();
+      const s = createCatalogSource({ fetchAll, ttlMs: 60_000, now: () => t, maxWaitMs: 800, onError });
+      await s.get();
+      t = 61_000;
+      await s.get();
+      expect(onError).toHaveBeenCalledTimes(1);
+      const pending = s.get();
+      await vi.advanceTimersByTimeAsync(800);
+      await pending;
+      fail(new Error('late'));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(onError).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
