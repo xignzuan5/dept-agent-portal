@@ -11,7 +11,7 @@ export function truncate(s: string, max: number): string {
 }
 
 /** 用户数据进 markdown 前把尖括号换成全角,避免误触发 <font>/<at> 等标签,同时保持可读。 */
-function safe(s: string): string {
+export function safe(s: string): string {
   return s.replace(/</g, '＜').replace(/>/g, '＞');
 }
 
@@ -109,10 +109,10 @@ export function entryTile(e: CatalogEntry): object {
 }
 
 /** Skill:默认折叠的面板,展开看详细说明。 */
-export function skillPanel(e: CatalogEntry): object {
+export function skillPanel(e: CatalogEntry, detailMax: number = DETAIL_MAX): object {
   const elements: object[] = [];
   if (e.detail) {
-    elements.push({ tag: 'markdown', content: safe(truncate(e.detail, DETAIL_MAX)), text_size: 'body' });
+    elements.push({ tag: 'markdown', content: safe(truncate(e.detail, detailMax)), text_size: 'body' });
   }
   const owner = e.ownerOpenIds[0];
   if (e.tags.length > 0 || owner) {
