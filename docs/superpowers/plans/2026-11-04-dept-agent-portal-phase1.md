@@ -10,6 +10,7 @@
 
 **Spec:** `/Users/xingzuan/work/dept-agent-portal/ai-native/intake/dept-agent-portal-card.intent.md`
 一期 = 范围(in) 中的「能力目录」「群大厅卡」「个人版门户卡(不含输入框直接问路由)」「随时调出门户」。**不在一期**:路由 agent(两个入口)、改表后主动更新已发出的卡片、大厅卡 14 天自动重发、使用统计。
+**2026-11-04 追加进一期**:数字员工链接用机器人 AppLink(Task 3);Banner——品牌头图、分类主题图、运营位(Task 5、Task 8、Task 9)。执行顺序见 SDD 台账:5 → 6 → 8 → [人工 T0] → 1b → 3b → 9 → 7。
 **与需求的有意偏差**:需求里的「标签筛选下拉」并入搜索(搜索同时匹配标签),一期不单独做下拉;条目按一行一个磁贴纵向排列(两列网格在手机上会挤压),不做多列网格。
 
 ## Global Constraints
@@ -24,6 +25,8 @@
 - 每页条目数 `PAGE_SIZE = 8`;目录缓存 `TTL = 60_000` ms(支撑「改表后新打开的门户卡 1 分钟内体现」)。
 - 用**专用飞书应用**,不复用 lark-cli 的 `cli_aa90f1abeab81cc6`:长连接为集群模式,同一应用只有一个客户端收到事件,会和 `lark-cli event consume` 抢事件。
 - 用户可见文案用中文。
+- Banner 图片:PNG,≤ 10MB、≤ 1500×3000px、高:宽 ≤ 16:9;本项目每张压到 ≤ 1MB。`img_key` 必须由**发卡片的那个应用**上传(`POST /open-apis/im/v1/images`,`image_type=message`)取得;图内不含文字。比例:品牌头图 2:1、分类主题图 4:1、运营图 3:1;通栏用负边距(见 `components/img.md`)。
+- 数字员工的链接约定为机器人 AppLink:前缀 `https://applink.feishu.cn/client/bot/open?appId=`。
 
 ## Review Focus
 
@@ -118,6 +121,7 @@ export function parseRecords(records: RawRecord[]): { entries: CatalogEntry[]; w
 
 **Files:**
 - Create: `data/seed-catalog.json`、`src/catalog/source.ts`
+- Modify: `src/catalog/parse.ts`、`test/catalog/parse.test.ts`(数字员工链接须为机器人 AppLink)
 - Test: `test/catalog/source.test.ts`、`test/catalog/source.integration.test.ts`
 
 **Interfaces:**
@@ -133,7 +137,8 @@ export function baseFetcher(client: lark.Client, appToken: string, tableId: stri
 ```
 
 - [ ] **Step 1:** 用 lark-cli(用户身份,按 lark-base skill)新建多维表格「部门能力目录」,数据表「能力目录」,字段严格按 Task 2 映射表建;把门户应用加为该多维表格的协作者(可阅读)。把 `CATALOG_APP_TOKEN`、`CATALOG_TABLE_ID` 写入 `.env` / `.env.example`。
-- [ ] **Step 2:** 写 `data/seed-catalog.json` 并用 lark-cli 批量写入:≥ 5 个数字员工(其中 2 个 `热门`)、≥ 5 个 Skill(其中 1 个详细说明 ≥ 1500 字)、2 个知识库、2 个团队服务、1 条缺跳转链接、1 条 `上架=false`;`负责人` 用真实 open_id(人员组件遇到无效 id 会导致整卡发送失败)。
+- [ ] **Step 2:** 写 `data/seed-catalog.json` 并用 lark-cli 批量写入:≥ 5 个数字员工(其中 2 个 `热门`)、≥ 5 个 Skill(其中 1 个详细说明 ≥ 1500 字)、2 个知识库、2 个团队服务、1 条缺跳转链接、1 条 `上架=false`;`负责人` 用真实 open_id(人员组件遇到无效 id 会导致整卡发送失败);数字员工的跳转链接一律用机器人 AppLink `https://applink.feishu.cn/client/bot/open?appId=cli_…`(真实的 aily 智能伙伴 App ID 由人提供,拿不到就用门户应用自己的 App ID 占位)。
+- [ ] **Step 2b:** 在 `parseRecords` 中:`category === "agent"` 且 `link` 非空但不以 `https://applink.feishu.cn/client/bot/open?appId=` 开头 → 条目保留,记 warning「记录 <record_id> 的数字员工链接不是机器人 AppLink」。先写失败测试 `warns when an agent link is not a bot AppLink but keeps the entry`(另一用例:非 agent 的普通 https 链接不告警),跑红、实现、跑绿。
 - [ ] **Step 3: 写失败测试** `test/catalog/source.test.ts`(注入假 `fetchAll` 与 `now`):
   - `serves cached entries within ttl without refetching`(60s 内两次 `get()`,`fetchAll` 调用 1 次)。
   - `refetches after ttl`。
@@ -191,8 +196,8 @@ export function buildLobbyCard(entries: CatalogEntry[], dept: DeptInfo): object;
 ### Task 5: 个人版门户卡
 
 **Files:**
-- Create: `src/cards/portal.ts`
-- Test: `test/cards/portal.test.ts`
+- Create: `src/cards/portal.ts`、`src/cards/banners.ts`
+- Test: `test/cards/portal.test.ts`、`test/cards/banners.test.ts`
 
 **Interfaces:**
 - Consumes: `entryTile`、`skillPanel`、`cardConfig`、`countElements`、`cardBytes`、`DeptInfo`(Task 4);`CatalogEntry`、`CATEGORIES`、`CATEGORY_LABEL`(Task 2)。
@@ -201,10 +206,13 @@ export function buildLobbyCard(entries: CatalogEntry[], dept: DeptInfo): object;
 export const PAGE_SIZE = 8;
 export interface PortalView { category: Category; page: number; query: string } // page 从 0 开始
 export function filterEntries(entries: CatalogEntry[], category: Category, query: string): CatalogEntry[];
-export function buildPortalCard(entries: CatalogEntry[], view: PortalView, dept: DeptInfo): { card: object; view: PortalView }; // 返回夹紧后的 view
+export function buildPortalCard(entries: CatalogEntry[], view: PortalView, dept: DeptInfo, banners?: BannerKeys): { card: object; view: PortalView }; // 返回夹紧后的 view
+// banners.ts
+export interface BannerKeys { brand: string | null; category: Record<Category, string | null>; promoDefault: string | null }
+export function bannerImg(imgKey: string, alt: string): object; // 通栏 img(crop_center、负边距撑满、preview:false)
 ```
 
-布局:header「${dept.name} · 门户」、副标题「仅你可见 · 共 N 项」;分类切换为四个按钮一行(当前分类 `primary_filled`,其余 `default`),callback `{v:1,a:"nav",cat,page:0,q:""}`;搜索为独立 `input`(placeholder「搜索名称、简介或标签」,`default_value = view.query`,`behaviors: [{type:"callback", value:{v:1,a:"search",cat: view.category}}]`);列表区放当页条目(Skill 用 `skillPanel`,其他用 `entryTile`);底部翻页:「上一页」· 「第 p/N 页」·「下一页」,callback `{v:1,a:"nav",cat,page:p±1,q}`,首页禁用上一页、末页禁用下一页。查询匹配名称、简介、标签,忽略大小写,仅在当前分类内。
+布局:header「${dept.name} · 门户」、副标题「仅你可见 · 共 N 项」;`banners?.category[view.category]` 非空时,body 第一个元素为该分类主题图 `bannerImg(key, CATEGORY_LABEL[cat])`,为空则不渲染图片;分类切换为四个按钮一行(当前分类 `primary_filled`,其余 `default`),callback `{v:1,a:"nav",cat,page:0,q:""}`;搜索为独立 `input`(placeholder「搜索名称、简介或标签」,`default_value = view.query`,`behaviors: [{type:"callback", value:{v:1,a:"search",cat: view.category}}]`);列表区放当页条目(Skill 用 `skillPanel`,其他用 `entryTile`);底部翻页:「上一页」· 「第 p/N 页」·「下一页」,callback `{v:1,a:"nav",cat,page:p±1,q}`,首页禁用上一页、末页禁用下一页。查询匹配名称、简介、标签,忽略大小写,仅在当前分类内。
 
 - [ ] **Step 1: 写失败测试**:
   - `current category button is primary_filled, others default`。
@@ -215,9 +223,11 @@ export function buildPortalCard(entries: CatalogEntry[], view: PortalView, dept:
   - `search input carries the current category in its callback value`。
   - `worst-case page stays within budget`:8 条同页、每条简介 200 字、详情 5000 字、10 个标签 → `countElements(card) <= MAX_ELEMENTS` 且 `cardBytes(card) <= MAX_BYTES`。
   - `element_ids are unique and match /^[A-Za-z][A-Za-z0-9_]{0,19}$/`。
-- [ ] **Step 2:** Run `npx vitest run test/cards/portal.test.ts` — Expected: FAIL。
-- [ ] **Step 3:** 实现 `filterEntries`、`buildPortalCard`。
-- [ ] **Step 4:** Run `npx vitest run test/cards/portal.test.ts` — Expected: PASS。
+  - `renders the current category's banner first when its key is set, and no img when it is null or banners is omitted`。
+  - banners:`bannerImg is a full-bleed img with the given key and alt, preview disabled`。
+- [ ] **Step 2:** Run `npx vitest run test/cards/portal.test.ts test/cards/banners.test.ts` — Expected: FAIL。
+- [ ] **Step 3:** 实现 `bannerImg`、`filterEntries`、`buildPortalCard`。
+- [ ] **Step 4:** Run `npx vitest run test/cards/portal.test.ts test/cards/banners.test.ts` — Expected: PASS。
 - [ ] **Step 5:** 用 Task 4 Step 5 的方式把第 1 页 agent 和 Skill 两种视图各发一张到测试群,按 P0–P7 自检。
 - [ ] **Step 6:** Commit:`git commit -m "feat: personal portal card with tabs, search and paging"`
 
@@ -278,7 +288,7 @@ export function openPortal(target: { chatId: string; openId: string; chatType: '
 - Test: `test/config.test.ts`、`test/bot/intent.test.ts`
 
 **Interfaces:**
-- Consumes: Task 1 的 `PERSONAL_DELIVERY`;Task 3 的 `createCatalogSource`、`baseFetcher`;Task 4 的 `buildLobbyCard`;Task 6 的 `handleCardAction`、`openPortal`、`Deliverer`、`CardActionInput`。
+- Consumes: Task 1 的 `PERSONAL_DELIVERY`;Task 3 的 `createCatalogSource`、`baseFetcher`;Task 4/8 的 `buildLobbyCard`(含 `LobbyExtras`);Task 6 的 `handleCardAction`、`openPortal`、`Deliverer`、`CardActionInput`;Task 9 的 `loadBannerKeys`、`createPromoSource`。门户卡与大厅卡都要传入 `BannerKeys`(门户卡经 `HandlerDeps` 带入:给 `HandlerDeps` 增加可选字段 `banners?: BannerKeys`,`openPortal`/`nav`/`search` 构卡时透传),大厅卡另传当前 `promos`。
 - Produces:
 ```ts
 // config.ts
@@ -309,4 +319,75 @@ export function isPortalCommand(text: string): boolean; // 去掉 @ 提及后 tr
   6. 私聊发「门户」、群里 @机器人「门户」、点机器人菜单「打开门户」都能调出门户。
   7. 在多维表格新增一条上架记录 → 60 秒后重新打开门户能看到它。
   8. 两人同时在群里打开并操作各自的门户,互不影响。
+  9. 大厅卡顶部是品牌头图、指标下方是运营位(点击跳到配置的链接);门户卡切换四个分类时,顶部主题图跟着换;PC、手机、深色模式下 banner 与 `cus-*` 颜色都正常显示。
+  10. 把运营位的结束时间改到过去 → 重新 `npm run lobby` 后不再显示该运营位。
 - [ ] **Step 9:** `README.md` 写清:`.env` 各项含义、`npm run dev` / `npm run lobby`、一期不含的能力。Commit:`git commit -m "feat: bot service wiring, lobby pinning and phase-1 acceptance"`
+
+---
+
+### Task 8: Banner 素材与大厅卡接入(品牌头图、运营位渲染)
+
+**Files:**
+- Create: `assets/banners/brand.png`(2:1)、`assets/banners/cat-agent.png`、`cat-skill.png`、`cat-kb.png`、`cat-service.png`(4:1)、`assets/banners/promo-default.png`(3:1)——由 controller 提供的 GPT 原图(1536×1024)用 PIL 居中裁切并压到 ≤ 1MB;裁切脚本 `scripts/crop-banners.py`
+- Modify: `src/cards/banners.ts`、`src/cards/lobby.ts`
+- Test: `test/cards/banners.test.ts`、`test/cards/lobby.test.ts`
+
+**Interfaces:**
+- Consumes: `BannerKeys`、`bannerImg`(Task 5);`buildLobbyCard`、`DeptInfo`、`cardConfig`、`countElements`、`cardBytes`(Task 4)。
+- Produces:
+```ts
+// banners.ts
+export interface Promo {
+  id: string; title: string; subtitle: string; link: string | null; imgKey: string | null;
+  start: number | null; end: number | null; order: number; // 毫秒时间戳;null 表示不限
+}
+export function activePromos(promos: Promo[], now: number): Promo[];          // start <= now < end,按 order 升序
+export function promoBlock(p: Promo, fallbackImgKey: string | null): object | null; // 图与 fallback 都没有时返回 null
+// lobby.ts
+export interface LobbyExtras { banners?: BannerKeys; promos?: Promo[]; now?: number }
+export function buildLobbyCard(entries: CatalogEntry[], dept: DeptInfo, extras?: LobbyExtras): object;
+```
+
+大厅卡加 banner 后的块顺序:品牌头图(`banners.brand` 非空时,body 第一个元素)→ 指标 → 运营位(仅 `activePromos` 的第一个)→ 热门数字员工 → 按钮。运营位块:有 `link` 时为 `interactive_container`(open_url),内含通栏图(`imgKey ?? fallbackImgKey`)+ **加粗标题** + 灰色说明(`cus-muted`);无 `link` 时同样内容但不可点击。不传 `extras` 时输出与 Task 4 完全相同(既有测试不改)。
+
+- [ ] **Step 1:** 写 `scripts/crop-banners.py`(Python 3 + PIL,`python3 -I` 运行):读 controller 给的原图目录,按上面比例居中裁切、缩到宽 1200px、存 PNG 并压到 ≤ 1MB,输出到 `assets/banners/`。运行并确认 6 张图的尺寸与体积(`sips -g pixelWidth -g pixelHeight`、`ls -la`)。
+- [ ] **Step 2: 写失败测试**:
+  - banners:`activePromos keeps only promos whose window contains now, sorted by order`(含未开始、已结束、两端为 null 的用例);`promoBlock with link is clickable and opens it`;`promoBlock without link is not clickable`;`promoBlock falls back to the default image and returns null when neither exists`。
+  - lobby:`brand banner is the first body element when set`;`no img when banners omitted (output equals Task 4 output)`;`shows only the first active promo`;`expired promo is not shown`;`lobby with banner and promo stays within MAX_ELEMENTS and MAX_BYTES`。
+- [ ] **Step 3:** Run `npx vitest run test/cards` — Expected: FAIL。
+- [ ] **Step 4:** 实现 `activePromos`、`promoBlock`、`LobbyExtras` 与大厅卡改动。
+- [ ] **Step 5:** Run `npx vitest run test/cards` — Expected: PASS;再跑 `npm test`、`npm run typecheck`。
+- [ ] **Step 6:** 预览:用 `lark-cli im images create --as bot --data '{"image_type":"message"}' --file <png>` 上传 6 张图拿 img_key(只用于预览,不提交),构造带头图 + 运营位的大厅卡,以及 agent / skill 两个分类的门户卡,发到用户私聊(同 Task 4 的发送方式),记录 message_id。
+- [ ] **Step 7:** Commit:`git add assets scripts src test && git commit -m "feat: banners for lobby and portal cards"`
+
+---
+
+### Task 9: 运营位表、图片上传与 banner key(需要门户应用)
+
+**Files:**
+- Create: `scripts/upload-banners.ts`、`data/banner-keys.json`(脚本产物,提交)、`src/catalog/promos.ts`
+- Test: `test/catalog/promos.test.ts`、`test/catalog/promos.integration.test.ts`
+
+**Interfaces:**
+- Consumes: `RawRecord`(Task 2);`Promo`、`BannerKeys`(Task 5/8);`createCatalogSource` 的缓存语义(Task 3,照同样的 TTL / 最长等待 / onError 规则实现)。
+- Produces:
+```ts
+export function loadBannerKeys(path: string): BannerKeys;   // 文件不存在或缺项 → 对应字段为 null,不抛错
+export interface PromoRecord extends Omit<Promo, 'imgKey'> { imageToken: string | null }
+export function parsePromoRecords(records: RawRecord[]): { promos: PromoRecord[]; warnings: string[] };
+export function createPromoSource(opts: {
+  fetchAll: () => Promise<RawRecord[]>;
+  resolveImage: (fileToken: string) => Promise<string>; // 附件 file_token → IM img_key,结果按 file_token 缓存
+  ttlMs: number; maxWaitMs?: number; onError?: (err: unknown) => void;
+}): { get(): Promise<Promo[]> };
+```
+
+「运营位」表字段:标题(文本)、说明(文本)、图片(附件,可选)、跳转链接(超链接)、开始时间(日期)、结束时间(日期)、排序(数字)、上架(复选框)。`上架` 不为 true 或缺标题 → 跳过并告警;链接规则同目录(仅 http(s))。图片转换失败 → 该运营位 `imgKey = null`(渲染时用默认运营图)并 `onError`,不影响其他运营位。
+
+- [ ] **Step 1:** `scripts/upload-banners.ts`:用门户应用(`.env` 的 FEISHU_APP_ID/SECRET)把 `assets/banners/` 6 张图以 `image_type=message` 上传,写 `data/banner-keys.json`(`{brand, category:{agent,skill,kb,service}, promoDefault}`)。运行它。
+- [ ] **Step 2:** 用 lark-cli(用户身份)在「部门能力目录」多维表格里新建数据表「运营位」(字段如上),写入 1 条生效中的示例(标题「新上线:周报助手」、跳转到种子里的一个数字员工 AppLink、无图片)和 1 条已过期的;`PROMO_TABLE_ID` 写入 `.env` / `.env.example`。
+- [ ] **Step 3: 写失败测试**:`loadBannerKeys returns nulls for a missing file`;`parsePromoRecords maps fields, converts dates to ms and skips unlisted/titleless records with warnings`;`promo source resolves each image token once and caches it`;`an image that fails to resolve yields imgKey null and calls onError`。
+- [ ] **Step 4:** Run `npx vitest run test/catalog/promos.test.ts` — Expected: FAIL。
+- [ ] **Step 5:** 实现 `loadBannerKeys`、`parsePromoRecords`、`createPromoSource`,以及真实的 `resolveImage`:`GET /open-apis/drive/v1/medias/:file_token/download` 下载附件 → `POST /open-apis/im/v1/images` 上传得 img_key。
+- [ ] **Step 6:** Run `npx vitest run test/catalog/promos.test.ts` — Expected: PASS;`INTEGRATION=1 npx vitest run test/catalog/promos.integration.test.ts` 读真实「运营位」表,Expected:只返回生效中的那 1 条。
+- [ ] **Step 7:** Commit:`git add scripts src test data .env.example && git commit -m "feat: promo table, banner upload and keys"`
