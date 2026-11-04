@@ -10,9 +10,9 @@ export function truncate(s: string, max: number): string {
   return chars.length > max ? chars.slice(0, max).join('') + '…' : s;
 }
 
-/** 用户数据进 markdown 前去掉尖括号,避免误触发 <font>/<at> 等标签。 */
+/** 用户数据进 markdown 前把尖括号换成全角,避免误触发 <font>/<at> 等标签,同时保持可读。 */
 function safe(s: string): string {
-  return s.replace(/[<>]/g, '');
+  return s.replace(/</g, '＜').replace(/>/g, '＞');
 }
 
 function tagsMarkdown(tags: string[]): string {
@@ -35,8 +35,8 @@ function tileBody(e: CatalogEntry, tagLimit: number): object[] {
   if (e.summary) {
     body.push({
       tag: 'markdown',
-      content: `<font color='grey'>${safe(truncate(e.summary, SUMMARY_MAX))}</font>`,
-      text_size: 'notation',
+      content: `<font color='cus-muted'>${safe(truncate(e.summary, SUMMARY_MAX))}</font>`,
+      text_size: 'caption',
     });
   }
   const tags = e.tags.slice(0, tagLimit);
@@ -78,7 +78,7 @@ export function entryTile(e: CatalogEntry): object {
       tag: 'interactive_container',
       width: 'fill',
       has_border: true,
-      border_color: 'blue-100',
+      border_color: 'cus-primary-border',
       corner_radius: '8px',
       padding: '12px 12px 12px 12px',
       vertical_spacing: '4px',
@@ -88,8 +88,8 @@ export function entryTile(e: CatalogEntry): object {
   }
   body.push({
     tag: 'markdown',
-    content: "<font color='grey'>链接未配置</font>",
-    text_size: 'notation',
+    content: "<font color='cus-muted'>链接未配置</font>",
+    text_size: 'caption',
   });
   return {
     tag: 'column_set',
@@ -112,7 +112,7 @@ export function entryTile(e: CatalogEntry): object {
 export function skillPanel(e: CatalogEntry): object {
   const elements: object[] = [];
   if (e.detail) {
-    elements.push({ tag: 'markdown', content: safe(truncate(e.detail, DETAIL_MAX)) });
+    elements.push({ tag: 'markdown', content: safe(truncate(e.detail, DETAIL_MAX)), text_size: 'body' });
   }
   const owner = e.ownerOpenIds[0];
   if (e.tags.length > 0 || owner) {
@@ -148,7 +148,7 @@ export function skillPanel(e: CatalogEntry): object {
       icon: { tag: 'standard_icon', token: CATEGORY_ICON.skill },
       icon_position: 'left',
     },
-    border: { color: 'blue-100', corner_radius: '8px' },
+    border: { color: 'cus-primary-border', corner_radius: '8px' },
     vertical_spacing: '8px',
     padding: '4px 12px 12px 12px',
     elements,

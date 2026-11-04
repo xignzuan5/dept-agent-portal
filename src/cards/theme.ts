@@ -7,13 +7,13 @@ export function cardConfig(): object {
     width_mode: 'default',
     style: {
       text_size: {
-        title: { default: 'heading-2', pc: 'heading-2', mobile: 'heading-3' },
         body: { default: 'normal', pc: 'normal', mobile: 'normal' },
         caption: { default: 'notation', pc: 'notation', mobile: 'notation' },
       },
       color: {
         'cus-primary': { light_mode: 'rgba(30,120,255,1)', dark_mode: 'rgba(80,150,255,1)' },
         'cus-primary-bg': { light_mode: 'rgba(30,120,255,0.08)', dark_mode: 'rgba(80,150,255,0.12)' },
+        'cus-primary-border': { light_mode: 'rgba(30,120,255,0.25)', dark_mode: 'rgba(80,150,255,0.35)' },
         'cus-muted': { light_mode: 'rgba(100,106,115,1)', dark_mode: 'rgba(150,155,163,1)' },
       },
     },

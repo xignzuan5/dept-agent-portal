@@ -85,3 +85,17 @@ describe('skillPanel', () => {
     expect(json(p).match(/<text_tag/g)).toHaveLength(4);
   });
 });
+
+describe('angle brackets in user text', () => {
+  it('maps < and > to full-width instead of deleting', () => {
+    const text = 'A -> B 与 List<string>';
+    const want = 'A -＞ B 与 List＜string＞';
+    const tile = json(entryTile(entry({ summary: text })));
+    expect(tile).toContain(want);
+    const panel = json(skillPanel(entry({ category: 'skill', summary: text, detail: text })));
+    expect(panel).toContain(want);
+    // the only raw '<' left are our own markup tags
+    expect(tile.replace(/<\/?(font|text_tag)[^>]*>/g, '')).not.toMatch(/[<>]/);
+    expect(panel.replace(/<\/?(font|text_tag)[^>]*>/g, '')).not.toMatch(/[<>]/);
+  });
+});

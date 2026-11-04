@@ -79,4 +79,19 @@ describe('buildLobbyCard', () => {
     expect(countElements(c)).toBeLessThanOrEqual(MAX_ELEMENTS);
     expect(cardBytes(c)).toBeLessThanOrEqual(MAX_BYTES);
   });
+
+  it('references cus-primary and only defines-used cus-* tokens', () => {
+    const c = buildLobbyCard([e({ hot: true, ownerOpenIds: [] }), e({ link: null, hot: true })], dept) as any;
+    const defined = Object.keys(c.config.style.color);
+    const body = JSON.stringify({ header: c.header, body: c.body });
+    const used = new Set(body.match(/cus-[a-z-]+/g) ?? []);
+    expect(used.has('cus-primary')).toBe(true);
+    for (const u of used) expect(defined).toContain(u);
+    for (const d of defined) expect(used.has(d)).toBe(true);
+    for (const t of body.match(/"text_size":"([a-z-]+)"/g) ?? []) {
+      const name = t.split('"')[3];
+      expect(['caption', 'body']).toContain(name);
+      expect(Object.keys(c.config.style.text_size)).toContain(name);
+    }
+  });
 });
