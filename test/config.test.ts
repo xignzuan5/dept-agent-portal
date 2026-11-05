@@ -23,6 +23,9 @@ describe('loadConfig', () => {
       expect(String(e)).not.toContain('sekret-value');
     }
   });
+  it('accepts ephemeral', () => {
+    expect(loadConfig({ ...full, PERSONAL_DELIVERY: 'ephemeral' }).personalDelivery).toBe('ephemeral');
+  });
   it('maps fields', () => {
     const c = loadConfig(full);
     expect(c.personalDelivery).toBe('p2p');

@@ -92,7 +92,8 @@ const dispatcher = new lark.EventDispatcher({}).register({
       }
       if (!isPortalCommand(text)) return;
       if (!firstMessage(message.message_id)) return;
-      await triggerPortal(openId, message.chat_id, chatType, `msg:${chatType}`);
+      // 立即返回以尽快 ack;投递失败不会因重投而重试,用户重新发指令即可
+      void triggerPortal(openId, message.chat_id, chatType, `msg:${chatType}`).catch((e) => console.error(`[msg] ${errMsg(e)}`));
     } catch (e) {
       console.error(`[msg] ${errMsg(e)}`);
     }
@@ -103,7 +104,8 @@ const dispatcher = new lark.EventDispatcher({}).register({
       const openId = data.operator?.operator_id?.open_id;
       if (!openId) return;
       if (data.event_id && !firstMenuEvent(data.event_id)) return;
-      await triggerPortal(openId, '', 'p2p', 'menu');
+      // 立即返回以尽快 ack;投递失败不会因重投而重试,用户重新点菜单即可
+      void triggerPortal(openId, '', 'p2p', 'menu').catch((e) => console.error(`[menu] ${errMsg(e)}`));
     } catch (e) {
       console.error(`[menu] ${errMsg(e)}`);
     }
