@@ -70,10 +70,10 @@ async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   }
 }
 
-export async function openPortal(target: Target, deps: HandlerDeps): Promise<CallbackResult> {
+export async function openPortal(target: Target, deps: HandlerDeps, category: Category = 'agent'): Promise<CallbackResult> {
   try {
     const entries = await deps.catalog.get();
-    const { card } = buildPortalCard(entries, { category: 'agent', page: 0, query: '' }, deps.dept, deps.banners);
+    const { card } = buildPortalCard(entries, { category, page: 0, query: '' }, deps.dept, deps.banners);
     let via: 'ephemeral' | 'p2p';
     try {
       ({ via } = await withTimeout(deps.deliver.personalPortal(target, card), DELIVERY_TIMEOUT_MS));
@@ -101,7 +101,7 @@ export async function handleCardAction(evt: CardActionInput, deps: HandlerDeps):
   try {
     switch (action.a) {
       case 'open_portal':
-        return await openPortal({ chatId: evt.chatId, openId: evt.operatorOpenId, chatType: evt.chatType }, deps);
+        return await openPortal({ chatId: evt.chatId, openId: evt.operatorOpenId, chatType: evt.chatType }, deps, action.cat);
       case 'nav':
         return await portalCard(deps, action.cat, action.page, action.q);
       case 'search':

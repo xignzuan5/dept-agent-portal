@@ -18,13 +18,35 @@ def encode(img):
     return buf.getvalue()
 
 
+def icon(src_dir, it, cap):
+    """Transparent icon: trim to the alpha bounding box, pad to a square with a margin, resize."""
+    im = Image.open(src_dir / it["src"]).convert("RGBA")
+    box = im.getchannel("A").point(lambda a: 255 if a > 8 else 0).getbbox()
+    im = im.crop(box)
+    side = round(max(im.size) * (1 + 2 * it.get("margin", 0.06)))
+    sq = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    sq.paste(im, ((side - im.width) // 2, (side - im.height) // 2))
+    sq = sq.resize((it["width"], it["width"]), Image.LANCZOS)
+    data = encode(sq)
+    if len(data) > cap:
+        sys.exit(f'{it["out"]}: {len(data)} bytes exceeds {cap}')
+    out = OUT.parent / it["out"]
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_bytes(data)
+    print(f'{it["out"]}: {it["width"]}x{it["width"]} {len(data)} bytes (alpha)')
+
+
 def main():
     if len(sys.argv) != 2:
         sys.exit("usage: crop-banners.py <source-dir>")
     src_dir = Path(sys.argv[1])
     m = json.loads((OUT / "crop-manifest.json").read_text())
-    width, cap = m["output_width"], m["max_bytes"]
+    cap = m["max_bytes"]
     for it in m["images"]:
+        if it.get("alpha"):
+            icon(src_dir, it, cap)
+            continue
+        width = it.get("width", m["output_width"])
         im = Image.open(src_dir / it["src"]).convert("RGB")
         w, h = im.size
         rw, rh = it["ratio"]
@@ -35,7 +57,7 @@ def main():
         else:
             cw = w
         top = min(max(it["center_y"] - ch // 2, 0), h - ch)
-        left = (w - cw) // 2
+        left = min(max(it.get("center_x", w // 2) - cw // 2, 0), w - cw)
         crop = im.crop((left, top, left + cw, top + ch))
         out_h = round(width * rh / rw)
         crop = crop.resize((width, out_h), Image.LANCZOS)

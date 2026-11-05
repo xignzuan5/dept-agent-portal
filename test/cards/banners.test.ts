@@ -9,7 +9,7 @@ describe('bannerImg', () => {
     expect(i.alt).toEqual({ tag: 'plain_text', content: '数字员工' });
     expect(i.scale_type).toBe('crop_center');
     expect(i.preview).toBe(false);
-    expect(i.margin).toBe('0px -12px 0px -12px');
+    expect(i.margin).toBe('-12px -12px 0px -12px');
   });
 });
 
@@ -36,29 +36,36 @@ describe('activePromos', () => {
 });
 
 describe('promoBlock', () => {
-  it('with link is clickable and opens it', () => {
+  it('with link is a clickable accent strip with a 1:1 thumbnail', () => {
     const b = promoBlock(promo(), null) as any;
     expect(b.tag).toBe('interactive_container');
+    expect(b.background_style).toBe('cus-accent-bg');
+    expect(b.corner_radius).toBe('10px');
     expect(b.behaviors).toEqual([{ type: 'open_url', default_url: 'https://example.com/p' }]);
-    expect(b.elements[0].tag).toBe('img');
-    expect(b.elements[0].img_key).toBe('img_p');
-    expect(JSON.stringify(b)).toContain('**新上线**');
-    expect(JSON.stringify(b)).toContain('cus-muted');
+    const img = b.elements[0].columns[0].elements[0];
+    expect(img.tag).toBe('img');
+    expect(img.img_key).toBe('img_p');
+    expect(img.scale_type).toBe('crop_center');
+    const s = JSON.stringify(b);
+    expect(s).toContain("<text_tag color='violet'>新上线</text_tag> **新上线**");
+    expect(s).toContain('cus-muted');
   });
 
   it('without link is not clickable', () => {
     const b = promoBlock(promo({ link: null }), null) as any;
-    expect(b.tag).not.toBe('interactive_container');
+    expect(b.tag).toBe('column_set');
     const s = JSON.stringify(b);
     expect(s).not.toContain('open_url');
+    expect(s).not.toContain('interactive_container');
     expect(s).toContain('img_p');
-    expect(s).toContain('**新上线**');
+    expect(s).toContain('cus-accent-bg');
   });
 
-  it('falls back to the default image and returns null when neither exists', () => {
-    const b = promoBlock(promo({ imgKey: null }), 'img_default') as any;
-    expect(JSON.stringify(b)).toContain('img_default');
-    expect(promoBlock(promo({ imgKey: null }), null)).toBeNull();
+  it('falls back to the default thumbnail, and renders text-only when there is no image at all', () => {
+    expect(JSON.stringify(promoBlock(promo({ imgKey: null }), 'img_default'))).toContain('img_default');
+    const s = JSON.stringify(promoBlock(promo({ imgKey: null }), null));
+    expect(s).not.toContain('"tag":"img"');
+    expect(s).toContain('**新上线**');
   });
 
   it('escapes angle brackets in title and subtitle', () => {

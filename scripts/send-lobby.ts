@@ -26,6 +26,7 @@ async function main() {
     const promoSource = createPromoSource({
       fetchAll: baseFetcher(client, config.catalogAppToken, config.promoTableId),
       resolveImage: createImageResolver(client),
+      imageTimeoutMs: 15000, // 一次性脚本不受 3 秒回调限制
       ttlMs: 60_000,
       onWarnings: (w) => w.length && console.warn(`[promo] 数据警告: ${w.join(' | ')}`),
       onError: (e) => console.error(`[promo] ${errMsg(e)}`),

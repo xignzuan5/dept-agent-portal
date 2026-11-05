@@ -1,13 +1,17 @@
 import type { Category } from '../catalog/types.js';
+import { muted } from './theme.js';
 import { safe } from './tiles.js';
 
 export interface BannerKeys {
   brand: string | null;
   category: Record<Category, string | null>;
+  /** 1:1 缩略图兜底(运营横条用)。 */
   promoDefault: string | null;
+  /** 每分类一个透明底图标(入口格 / 磁贴 / Skill 面板头);缺失为 null,退回 standard_icon。 */
+  icons: Record<Category, string | null>;
 }
 
-/** 通栏图:负边距抵消 body 的 12px 内边距;不可点击放大。 */
+/** 通栏图:负边距抵消 body 的 12px 内边距,顶部与 header 贴合;不可点击放大。 */
 export function bannerImg(imgKey: string, alt: string): object {
   return {
     tag: 'img',
@@ -15,7 +19,7 @@ export function bannerImg(imgKey: string, alt: string): object {
     alt: { tag: 'plain_text', content: alt },
     scale_type: 'crop_center',
     preview: false,
-    margin: '0px -12px 0px -12px',
+    margin: '-12px -12px 0px -12px',
   };
 }
 
@@ -37,46 +41,63 @@ export function activePromos(promos: Promo[], now: number): Promo[] {
     .sort((a, b) => a.order - b.order);
 }
 
-/** 运营位:通栏图 + 加粗标题 + 灰色说明;有 link 时整块可点击。图与兜底图都没有时返回 null。 */
-export function promoBlock(p: Promo, fallbackImgKey: string | null): object | null {
+/** 运营横条:左 1:1 缩略图 + 右「新上线」标签/标题/说明;有 link 时整条可点击。 */
+export function promoBlock(p: Promo, fallbackImgKey: string | null): object {
   const imgKey = p.imgKey ?? fallbackImgKey;
-  if (!imgKey) return null;
-  const inner: object[] = [
-    bannerImg(imgKey, '运营位'),
-    { tag: 'markdown', content: `**${safe(p.title)}**` },
-    {
-      tag: 'markdown',
-      content: `<font color='cus-muted'>${safe(p.subtitle)}</font>`,
-      text_size: 'caption',
-    },
-  ];
+  const columns: object[] = [];
+  if (imgKey) {
+    columns.push({
+      tag: 'column',
+      width: 'auto',
+      vertical_align: 'center',
+      elements: [
+        {
+          tag: 'img',
+          img_key: imgKey,
+          alt: { tag: 'plain_text', content: '运营位' },
+          scale_type: 'crop_center',
+          size: '64px 64px',
+          corner_radius: '8px',
+          preview: false,
+        },
+      ],
+    });
+  }
+  columns.push({
+    tag: 'column',
+    width: 'weighted',
+    weight: 1,
+    vertical_align: 'center',
+    vertical_spacing: '2px',
+    elements: [
+      { tag: 'markdown', content: `<text_tag color='violet'>新上线</text_tag> **${safe(p.title)}**` },
+      { tag: 'markdown', content: muted(safe(p.subtitle)), text_size: 'caption' },
+    ],
+  });
+  const row = { tag: 'column_set', flex_mode: 'none', horizontal_spacing: '12px', columns };
   if (p.link) {
     return {
       tag: 'interactive_container',
       width: 'fill',
-      has_border: true,
-      border_color: 'cus-primary-border',
-      corner_radius: '8px',
-      padding: '0px 12px 12px 12px',
-      margin: '0px 0px 12px 0px',
-      vertical_spacing: '4px',
+      background_style: 'cus-accent-bg',
+      corner_radius: '10px',
+      padding: '12px 12px 12px 12px',
       behaviors: [{ type: 'open_url', default_url: p.link }],
-      elements: inner,
+      elements: [row],
     };
   }
+  // 无链接:不可点;column 不支持圆角,只给底色
   return {
     tag: 'column_set',
     flex_mode: 'none',
-    margin: '0px 0px 12px 0px',
     columns: [
       {
         tag: 'column',
         width: 'weighted',
         weight: 1,
-        padding: '0px 12px 12px 12px',
-        vertical_spacing: '4px',
-        background_style: 'cus-primary-bg',
-        elements: inner,
+        background_style: 'cus-accent-bg',
+        padding: '12px 12px 12px 12px',
+        elements: [row],
       },
     ],
   };

@@ -1,7 +1,7 @@
 import { CATEGORIES, type Category } from '../catalog/types.js';
 
 export type PortalAction =
-  | { v: 1; a: 'open_portal' }
+  | { v: 1; a: 'open_portal'; cat?: Category }
   | { v: 1; a: 'nav'; cat: Category; page: number; q: string }
   | { v: 1; a: 'search'; cat: Category };
 
@@ -24,7 +24,7 @@ export function decodeAction(value: unknown): PortalAction | null {
   if (r.v !== 1) return null;
   switch (r.a) {
     case 'open_portal':
-      return { v: 1, a: 'open_portal' };
+      return isCategory(r.cat) ? { v: 1, a: 'open_portal', cat: r.cat } : { v: 1, a: 'open_portal' };
     case 'nav': {
       if (!isCategory(r.cat)) return null;
       if (typeof r.page !== 'number' || !Number.isInteger(r.page) || r.page < 0) return null;

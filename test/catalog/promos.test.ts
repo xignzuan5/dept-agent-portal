@@ -25,6 +25,7 @@ describe('loadBannerKeys', () => {
       brand: null,
       category: { agent: null, skill: null, kb: null, service: null },
       promoDefault: null,
+      icons: { agent: null, skill: null, kb: null, service: null },
     });
   });
   it('reads present fields and nulls missing ones', () => {
@@ -34,7 +35,15 @@ describe('loadBannerKeys', () => {
       brand: 'b',
       category: { agent: 'a', skill: null, kb: null, service: null },
       promoDefault: null,
+      icons: { agent: null, skill: null, kb: null, service: null },
     });
+  });
+  it('returns null icons when the file has none, and reads icons when present', () => {
+    const p = join(mkdtempSync(join(tmpdir(), 'bk-')), 'k.json');
+    writeFileSync(p, JSON.stringify({ brand: 'b', category: {}, promoDefault: 'p' }));
+    expect(loadBannerKeys(p).icons).toEqual({ agent: null, skill: null, kb: null, service: null });
+    writeFileSync(p, JSON.stringify({ icons: { agent: 'ia', skill: 'is', kb: 5 } }));
+    expect(loadBannerKeys(p).icons).toEqual({ agent: 'ia', skill: 'is', kb: null, service: null });
   });
   it('returns nulls for invalid JSON', () => {
     const p = join(mkdtempSync(join(tmpdir(), 'bk-')), 'k.json');

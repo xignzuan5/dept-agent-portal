@@ -63,6 +63,11 @@ describe('decodeAction', () => {
     expect(decodeAction([])).toBeNull();
     expect(decodeAction('"str"')).toBeNull();
   });
+  it('keeps a valid open_portal cat and drops an invalid one', () => {
+    expect(decodeAction({ v: 1, a: 'open_portal', cat: 'skill' })).toEqual({ v: 1, a: 'open_portal', cat: 'skill' });
+    expect(decodeAction({ v: 1, a: 'open_portal', cat: 'zzz' })).toEqual({ v: 1, a: 'open_portal' });
+    expect(decodeAction({ v: 1, a: 'open_portal', cat: 5 })).toEqual({ v: 1, a: 'open_portal' });
+  });
   it('nav without q defaults to empty query', () => {
     expect(decodeAction({ v: 1, a: 'nav', cat: 'kb', page: 0 })).toEqual({ v: 1, a: 'nav', cat: 'kb', page: 0, q: '' });
   });
@@ -81,6 +86,17 @@ describe('handleCardAction', () => {
     const b = mk({ deliver: { personalPortal: async () => ({ via: 'p2p' }) } });
     const r2 = await handleCardAction(evt({ v: 1, a: 'open_portal' }), b.deps);
     expect(r2.toast).toEqual({ type: 'success', content: '已在私聊打开门户' });
+  });
+
+  it('open_portal with cat delivers a portal opened on that category', async () => {
+    const es = [...many(3, { category: 'agent' }), ...many(3, { category: 'skill' })];
+    const a = mk({}, es);
+    await handleCardAction(evt({ v: 1, a: 'open_portal', cat: 'skill' }), a.deps);
+    const card = a.personalPortal.mock.calls[0][1] as any;
+    expect(card.header.subtitle.content.startsWith('Skill · ')).toBe(true);
+    const b = mk({}, es);
+    await handleCardAction(evt({ v: 1, a: 'open_portal' }), b.deps);
+    expect((b.personalPortal.mock.calls[0][1] as any).header.subtitle.content.startsWith('数字员工 · ')).toBe(true);
   });
 
   it('nav returns a raw card for the requested category and page', async () => {
@@ -120,7 +136,7 @@ describe('handleCardAction', () => {
   });
 
   it('passes banners through to the card', async () => {
-    const banners = { brand: null, category: { agent: 'img_agent_key', skill: null, kb: null, service: null }, promoDefault: null };
+    const banners = { brand: null, category: { agent: 'img_agent_key', skill: null, kb: null, service: null }, promoDefault: null, icons: { agent: null, skill: null, kb: null, service: null } };
     const r = await handleCardAction(evt({ v: 1, a: 'nav', cat: 'agent', page: 0, q: '' }), mk({ banners }).deps);
     expect(json(r.card?.data)).toContain('img_agent_key');
   });

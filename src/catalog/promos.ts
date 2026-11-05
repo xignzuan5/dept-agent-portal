@@ -28,7 +28,9 @@ export function loadBannerKeys(path: string): BannerKeys {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   const cat = (o.category && typeof o.category === 'object' ? o.category : {}) as Record<string, unknown>;
   const category = Object.fromEntries(CATEGORIES.map((c) => [c, str(cat[c])])) as BannerKeys['category'];
-  return { brand: str(o.brand), category, promoDefault: str(o.promoDefault) };
+  const ic = (o.icons && typeof o.icons === 'object' ? o.icons : {}) as Record<string, unknown>;
+  const icons = Object.fromEntries(CATEGORIES.map((c) => [c, str(ic[c])])) as BannerKeys['icons'];
+  return { brand: str(o.brand), category, promoDefault: str(o.promoDefault), icons };
 }
 
 export interface PromoRecord extends Omit<Promo, 'imgKey'> {

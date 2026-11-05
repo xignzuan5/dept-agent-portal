@@ -1,9 +1,11 @@
 import type { CatalogEntry } from '../catalog/types.js';
-import { CATEGORY_ICON } from './theme.js';
+import { categoryIcon, muted } from './theme.js';
 
 const SUMMARY_MAX = 60;
-const DETAIL_MAX = 1500;
-const TILE_TAGS_MAX = 3;
+const TILE_TAGS_MAX = 2;
+/** Skill 详情首档上限;整页超预算时由 portal 逐档收缩。 */
+export const DETAIL_MAX = 400;
+const DETAIL_SUFFIX = '…完整说明见文档';
 
 export function truncate(s: string, max: number): string {
   const chars = [...s];
@@ -16,81 +18,84 @@ export function safe(s: string): string {
 }
 
 function tagsMarkdown(tags: string[]): string {
-  return tags.map((t) => `<text_tag color='blue'>${safe(t)}</text_tag>`).join(' ');
+  return tags.map((t) => `<text_tag color='neutral'>${safe(t)}</text_tag>`).join(' ');
 }
 
-function ownerPerson(openId: string): object {
-  return { tag: 'person', user_id: openId, size: 'small', show_name: true, show_avatar: true };
+const inkBold = (s: string): string => `**<font color='cus-ink'>${safe(s)}</font>**`;
+
+/**
+ * Skill 详情:把「【标题】」转成独立一行的 **标题**,再按字数上限截断,
+ * 超出以「…完整说明见文档」结尾。max=0 时返回空串。
+ */
+export function formatDetail(detail: string, max: number): string {
+  if (max <= 0) return '';
+  const text = detail
+    .replace(/【([^】]*)】/g, '\n**$1**\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  const chars = [...text];
+  if (chars.length <= max) return text;
+  let cut = chars.slice(0, max).join('');
+  if ((cut.match(/\*\*/g) ?? []).length % 2 === 1) cut += '**'; // 截断处在加粗中间时补全
+  return cut + DETAIL_SUFFIX;
 }
 
-/** 磁贴正文:图标+加粗名称 / 灰色简介 / 标签与负责人一行。 */
-function tileBody(e: CatalogEntry, tagLimit: number): object[] {
-  const body: object[] = [
-    {
-      tag: 'div',
-      text: { tag: 'lark_md', content: `**${safe(e.name)}**` },
-      icon: { tag: 'standard_icon', token: CATEGORY_ICON[e.category] },
-    },
-  ];
+const SURFACE = {
+  background_style: 'cus-surface',
+  has_border: true,
+  border_color: 'cus-line',
+  corner_radius: '10px',
+  padding: '12px 12px 12px 12px',
+};
+
+/** 数字员工 / 知识库 / 团队服务磁贴:左图标,右名称 / 简介 / 标签。iconKey 缺失时退回 standard_icon。 */
+export function entryTile(e: CatalogEntry, iconKey?: string | null): object {
+  const right: object[] = [];
+  const nameMd = inkBold(e.name);
+  if (iconKey) {
+    right.push({ tag: 'markdown', content: nameMd });
+  } else {
+    right.push({ tag: 'div', text: { tag: 'lark_md', content: nameMd }, icon: categoryIcon(e.category, null) });
+  }
   if (e.summary) {
-    body.push({
-      tag: 'markdown',
-      content: `<font color='cus-muted'>${safe(truncate(e.summary, SUMMARY_MAX))}</font>`,
-      text_size: 'caption',
-    });
+    right.push({ tag: 'markdown', content: muted(safe(truncate(e.summary, SUMMARY_MAX))), text_size: 'caption' });
   }
-  const tags = e.tags.slice(0, tagLimit);
-  const owner = e.ownerOpenIds[0];
-  if (tags.length > 0 || owner) {
-    const columns: object[] = [];
-    if (tags.length > 0) {
-      columns.push({
-        tag: 'column',
-        width: 'weighted',
-        weight: 1,
-        vertical_align: 'center',
-        elements: [{ tag: 'markdown', content: tagsMarkdown(tags) }],
-      });
-    }
-    if (owner) {
-      columns.push({
-        tag: 'column',
-        width: 'auto',
-        vertical_align: 'center',
-        elements: [ownerPerson(owner)],
-      });
-    }
-    body.push({
-      tag: 'column_set',
-      flex_mode: 'none',
-      horizontal_spacing: '8px',
-      columns,
-    });
-  }
-  return body;
-}
+  const tags = e.tags.slice(0, TILE_TAGS_MAX);
+  if (tags.length > 0) right.push({ tag: 'markdown', content: tagsMarkdown(tags) });
+  if (!e.link) right.push({ tag: 'markdown', content: muted('链接未配置'), text_size: 'caption' });
 
-/** 数字员工 / 知识库 / 团队服务磁贴。 */
-export function entryTile(e: CatalogEntry): object {
-  const body = tileBody(e, TILE_TAGS_MAX);
+  const columns: object[] = [];
+  if (iconKey) {
+    columns.push({
+      tag: 'column',
+      width: 'auto',
+      vertical_align: 'top',
+      elements: [
+        {
+          tag: 'img',
+          img_key: iconKey,
+          alt: { tag: 'plain_text', content: '' },
+          scale_type: 'crop_center',
+          size: 'small',
+          corner_radius: '8px',
+          preview: false,
+        },
+      ],
+    });
+  }
+  columns.push({ tag: 'column', width: 'weighted', weight: 1, vertical_spacing: '2px', elements: right });
+  const row = { tag: 'column_set', flex_mode: 'none', horizontal_spacing: '12px', columns };
+
   if (e.link) {
     return {
       tag: 'interactive_container',
       width: 'fill',
-      has_border: true,
-      border_color: 'cus-primary-border',
-      corner_radius: '8px',
-      padding: '12px 12px 12px 12px',
-      vertical_spacing: '4px',
+      ...SURFACE,
       behaviors: [{ type: 'open_url', default_url: e.link }],
-      elements: body,
+      elements: [row],
     };
   }
-  body.push({
-    tag: 'markdown',
-    content: "<font color='cus-muted'>链接未配置</font>",
-    text_size: 'caption',
-  });
+  // 无链接:不可点,同样的面(column 不支持边框/圆角,只给底色)
   return {
     tag: 'column_set',
     flex_mode: 'none',
@@ -99,58 +104,48 @@ export function entryTile(e: CatalogEntry): object {
         tag: 'column',
         width: 'weighted',
         weight: 1,
-        background_style: 'grey-50',
-        padding: '12px 12px 12px 12px',
-        vertical_spacing: '4px',
-        elements: body,
+        background_style: 'cus-surface',
+        padding: SURFACE.padding,
+        elements: [row],
       },
     ],
   };
 }
 
-/** Skill:默认折叠的面板,展开看详细说明。 */
-export function skillPanel(e: CatalogEntry, detailMax: number = DETAIL_MAX): object {
+/** Skill:默认折叠的面板,展开依次是简介 / 查看文档 / 详情 / 标签。 */
+export function skillPanel(e: CatalogEntry, detailMax: number = DETAIL_MAX, iconKey?: string | null): object {
   const elements: object[] = [];
-  if (e.detail) {
-    elements.push({ tag: 'markdown', content: safe(truncate(e.detail, detailMax)), text_size: 'body' });
-  }
-  const owner = e.ownerOpenIds[0];
-  if (e.tags.length > 0 || owner) {
-    const columns: object[] = [];
-    if (e.tags.length > 0) {
-      columns.push({
-        tag: 'column',
-        width: 'weighted',
-        weight: 1,
-        vertical_align: 'center',
-        elements: [{ tag: 'markdown', content: tagsMarkdown(e.tags) }],
-      });
-    }
-    if (owner) {
-      columns.push({ tag: 'column', width: 'auto', vertical_align: 'center', elements: [ownerPerson(owner)] });
-    }
-    elements.push({ tag: 'column_set', flex_mode: 'none', horizontal_spacing: '8px', columns });
+  if (e.summary) {
+    elements.push({ tag: 'markdown', content: muted(safe(truncate(e.summary, 200))), text_size: 'caption' });
   }
   if (e.link) {
     elements.push({
       tag: 'button',
       text: { tag: 'plain_text', content: '查看文档' },
-      type: 'default',
+      type: 'primary',
       size: 'small',
       behaviors: [{ type: 'open_url', default_url: e.link }],
     });
   }
+  const detail = e.detail ? formatDetail(e.detail, detailMax) : '';
+  if (detail) elements.push({ tag: 'markdown', content: safe(detail), text_size: 'body' });
+  if (e.tags.length > 0) elements.push({ tag: 'markdown', content: tagsMarkdown(e.tags) });
+
+  const header: Record<string, unknown> = {
+    title: { tag: 'markdown', content: `**${safe(e.name)}**` },
+    background_color: 'cus-surface',
+  };
+  if (iconKey) {
+    header.icon = { tag: 'custom_icon', img_key: iconKey };
+    header.icon_position = 'left';
+  }
   return {
     tag: 'collapsible_panel',
     expanded: false,
-    header: {
-      title: { tag: 'markdown', content: `**${safe(e.name)}** · ${safe(e.summary)}` },
-      icon: { tag: 'standard_icon', token: CATEGORY_ICON.skill },
-      icon_position: 'left',
-    },
-    border: { color: 'cus-primary-border', corner_radius: '8px' },
+    header,
+    border: { color: 'cus-line', corner_radius: '10px' },
     vertical_spacing: '8px',
-    padding: '4px 12px 12px 12px',
+    padding: '8px 12px 12px 12px',
     elements,
   };
 }

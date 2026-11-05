@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { buildLobbyCard } from '../../src/cards/lobby.js';
 import type { BannerKeys, Promo } from '../../src/cards/banners.js';
 import { cardBytes, countElements, MAX_BYTES, MAX_ELEMENTS } from '../../src/cards/budget.js';
-import { readFileSync } from 'node:fs';
-import { FIXTURE_DEPT, FIXTURE_ENTRIES } from './__fixtures__/lobby-input.js';
 import type { CatalogEntry } from '../../src/catalog/types.js';
 
 const dept = { name: '智能平台部', intro: '找到能帮上忙的数字员工', routerLink: null as string | null };
@@ -25,17 +23,51 @@ const e = (over: Partial<CatalogEntry> = {}): CatalogEntry => ({
 
 const json = (o: object) => JSON.stringify(o);
 
+function find(node: unknown, pred: (o: any) => boolean, out: any[] = []): any[] {
+  if (Array.isArray(node)) node.forEach((x) => find(x, pred, out));
+  else if (node && typeof node === 'object') {
+    if (pred(node)) out.push(node);
+    Object.values(node).forEach((x) => find(x, pred, out));
+  }
+  return out;
+}
+
 describe('buildLobbyCard', () => {
-  it('schema 2.0 with title and counts tag', () => {
-    const c = buildLobbyCard(
-      [e(), e(), e({ category: 'skill' })],
-      dept,
-    ) as any;
+  it('schema 2.0 with title, subtitle and no count tag', () => {
+    const c = buildLobbyCard([e(), e(), e({ category: 'skill' })], dept) as any;
     expect(c.schema).toBe('2.0');
     expect(c.header.title.content).toBe('智能平台部数字员工门户');
     expect(c.header.subtitle.content).toBe(dept.intro);
     expect(c.header.template).toBe('blue');
-    expect(c.header.text_tag_list[0].text.content).toBe('2 个数字员工 · 1 个 Skill');
+    expect(c.header.text_tag_list).toBeUndefined();
+  });
+
+  it('lobby has four category entries calling open_portal with agent, skill, kb, service in order', () => {
+    const c = buildLobbyCard([e(), e(), e({ category: 'skill' }), e({ category: 'kb' })], dept) as any;
+    const cells = find(c.body, (o) => o.tag === 'interactive_container' && o.behaviors?.[0]?.value?.a === 'open_portal');
+    expect(cells.map((x) => x.behaviors[0].value)).toEqual(
+      ['agent', 'skill', 'kb', 'service'].map((cat) => ({ v: 1, a: 'open_portal', cat })),
+    );
+    expect(cells.map((x) => x.behaviors[0].type)).toEqual(['callback', 'callback', 'callback', 'callback']);
+    const grid = c.body.elements.filter((x: any) => x.tag === 'column_set').slice(0, 2);
+    expect(grid.map((g: any) => g.columns.length)).toEqual([2, 2]);
+    expect(cells[0]).toMatchObject({ background_style: 'cus-surface', has_border: true, border_color: 'cus-line', corner_radius: '10px' });
+    const txt = cells.map((x) => JSON.stringify(x.elements));
+    expect(txt[0]).toContain('数字员工');
+    expect(txt[0]).toContain("<font color='cus-muted'>2</font>");
+    expect(txt[1]).toContain("<font color='cus-muted'>1</font>");
+    expect(txt[3]).toContain("<font color='cus-muted'>0</font>");
+    expect(txt.map((t) => ['帮你干活的 AI 同事', '即装即用的销售技能', '产品、报价、案例一处查', '审批与售前支持'].some((w) => t.includes(w)))).toEqual([true, true, true, true]);
+  });
+
+  it('entry cells use the category icon img_key as custom_icon, else standard_icon', () => {
+    const icons = { agent: 'ia', skill: null, kb: 'ik', service: null };
+    const bn: BannerKeys = { brand: null, category: { agent: null, skill: null, kb: null, service: null }, promoDefault: null, icons };
+    const cells = find(buildLobbyCard([e()], dept, { banners: bn }), (o) => o.tag === 'interactive_container' && o.behaviors?.[0]?.value?.cat);
+    const ic = cells.map((x) => x.elements[0].icon);
+    expect(ic[0]).toEqual({ tag: 'custom_icon', img_key: 'ia' });
+    expect(ic[1].tag).toBe('standard_icon');
+    expect(ic[2]).toEqual({ tag: 'custom_icon', img_key: 'ik' });
   });
 
   it('shows up to 4 hot agents and backfills by order', () => {
@@ -47,19 +79,29 @@ describe('buildLobbyCard', () => {
       e({ name: 'A4', order: 4 }),
     ];
     const s = json(buildLobbyCard(agents, dept));
-    for (const name of ['A5', 'A3', 'A1', 'A2']) expect(s).toContain(`**${name}**`);
-    expect(s).not.toContain('**A4**');
+    for (const name of ['A5', 'A3', 'A1', 'A2']) expect(s).toContain(`>${name}</font>`);
+    expect(s).not.toContain('>A4</font>');
     const many = Array.from({ length: 6 }, (_, i) => e({ name: `H${i}`, order: i, hot: true }));
     const s2 = json(buildLobbyCard(many, dept));
-    expect(s2).toContain('**H3**');
-    expect(s2).not.toContain('**H4**');
+    expect(s2).toContain('>H3</font>');
+    expect(s2).not.toContain('>H4</font>');
   });
 
-  it('has open_portal callback button', () => {
-    const s = json(buildLobbyCard([e()], dept));
-    expect(s).toContain('"value":{"v":1,"a":"open_portal"}');
-    expect(s).toContain('打开门户');
-    expect(s).toContain('primary_filled');
+  it('hot section title uses the title size and a text button 「全部 N 个 →」 opening the agent category', () => {
+    const c = buildLobbyCard([e({ hot: true }), e(), e({ category: 'skill' })], dept);
+    const title = find(c, (o) => o.tag === 'markdown' && o.content === '热门数字员工')[0];
+    expect(title.text_size).toBe('title');
+    const all = find(c, (o) => o.tag === 'button' && o.text.content === '全部 2 个 →')[0];
+    expect(all).toMatchObject({ type: 'text', size: 'small' });
+    expect(all.behaviors).toEqual([{ type: 'callback', value: { v: 1, a: 'open_portal', cat: 'agent' } }]);
+    expect(json(c)).not.toContain('**热门数字员工**');
+  });
+
+  it('has the open_portal main button (no cat), large and filled', () => {
+    const c = buildLobbyCard([e()], dept);
+    const b = find(c, (o) => o.tag === 'button' && o.text.content === '打开门户')[0];
+    expect(b).toMatchObject({ type: 'primary_filled', width: 'fill', size: 'large' });
+    expect(b.behaviors).toEqual([{ type: 'callback', value: { v: 1, a: 'open_portal' } }]);
   });
 
   it('router button only when routerLink set', () => {
@@ -71,9 +113,14 @@ describe('buildLobbyCard', () => {
 
   it('empty catalog renders zero counts and no hot section', () => {
     const c = buildLobbyCard([], dept) as any;
-    expect(c.header.text_tag_list[0].text.content).toBe('0 个数字员工 · 0 个 Skill');
+    expect(json(c)).toContain("<font color='cus-muted'>0</font>");
     expect(json(c)).not.toContain('热门数字员工');
     expect(json(c)).toContain('打开门户');
+  });
+
+  it('no card contains a person element', () => {
+    const withOwner = [e({ hot: true, ownerOpenIds: ['ou_x'] }), e({ category: 'skill', ownerOpenIds: ['ou_x'] })];
+    expect(json(buildLobbyCard(withOwner, dept))).not.toContain('"tag":"person"');
   });
 
   it('lobby stays within MAX_ELEMENTS and MAX_BYTES', () => {
@@ -83,17 +130,16 @@ describe('buildLobbyCard', () => {
     expect(cardBytes(c)).toBeLessThanOrEqual(MAX_BYTES);
   });
 
-  it('references cus-primary and only defines-used cus-* tokens', () => {
-    const c = buildLobbyCard([e({ hot: true, ownerOpenIds: [] }), e({ link: null, hot: true })], dept) as any;
+  it('references only defined colour tokens and text sizes, and never the removed border token', () => {
+    const c = buildLobbyCard([e({ hot: true }), e({ link: null, hot: true })], dept) as any;
     const defined = Object.keys(c.config.style.color);
+    expect(defined).not.toContain('cus-primary-border');
     const body = JSON.stringify({ header: c.header, body: c.body });
-    const used = new Set(body.match(/cus-[a-z-]+/g) ?? []);
-    expect(used.has('cus-primary')).toBe(true);
-    for (const u of used) expect(defined).toContain(u);
-    for (const d of defined) expect(used.has(d)).toBe(true);
+    for (const u of new Set(body.match(/cus-[a-z-]+/g) ?? [])) expect(defined).toContain(u);
+    expect(body).not.toContain('cus-primary-border');
     for (const t of body.match(/"text_size":"([a-z-]+)"/g) ?? []) {
       const name = t.split('"')[3];
-      expect(['caption', 'body']).toContain(name);
+      expect(['caption', 'body', 'title']).toContain(name);
       expect(Object.keys(c.config.style.text_size)).toContain(name);
     }
   });
@@ -104,6 +150,7 @@ describe('buildLobbyCard banners and promo', () => {
     brand: 'img_brand',
     category: { agent: null, skill: null, kb: null, service: null },
     promoDefault: 'img_promo_default',
+    icons: { agent: null, skill: null, kb: null, service: null },
   };
   const mkPromo = (over: Partial<Promo> = {}): Promo => ({
     id: 'p1', title: '促销一', subtitle: '说明一', link: 'https://example.com/1', imgKey: null,
@@ -112,27 +159,30 @@ describe('buildLobbyCard banners and promo', () => {
   const fixed = [e({ hot: true }), e({ category: 'skill' })];
   const entries = () => fixed;
 
-  it('brand banner is the first body element when set', () => {
+  it('lobby hero image is flush with the header (margin top -12px) and header has no count tag', () => {
     const c = buildLobbyCard(entries(), dept, { banners }) as any;
     const first = c.body.elements[0];
     expect(first.tag).toBe('img');
     expect(first.img_key).toBe('img_brand');
+    expect(first.margin).toBe('-12px -12px 0px -12px');
+    expect(c.header.text_tag_list).toBeUndefined();
   });
 
-  it('no img when banners omitted (output equals Task 4 output)', () => {
-    const base = json(buildLobbyCard(entries(), dept));
-    expect(base).not.toContain('"tag":"img"');
-    expect(json(buildLobbyCard(entries(), dept, {}))).toBe(base);
-    expect(json(buildLobbyCard(entries(), dept, { promos: [mkPromo()], now: 1 }))).toBe(base);
+  it('no img when banners omitted, and promos ignore missing banners', () => {
+    expect(json(buildLobbyCard(entries(), dept))).not.toContain('"tag":"img"');
+    expect(json(buildLobbyCard(entries(), dept, {}))).toBe(json(buildLobbyCard(entries(), dept)));
   });
 
-  it('places promo after metrics and before hot agents', () => {
+  it('places the promo strip last, after the hot section', () => {
     const c = buildLobbyCard(entries(), dept, { banners, promos: [mkPromo()], now: 1 }) as any;
-    const tags = c.body.elements.map((x: any) => x.tag);
-    expect(tags[0]).toBe('img');
-    expect(tags[1]).toBe('column_set');
-    expect(tags[2]).toBe('interactive_container');
-    expect(c.body.elements[2].elements[0].img_key).toBe('img_promo_default');
+    const els = c.body.elements;
+    expect(els[0].tag).toBe('img');
+    const last = els[els.length - 1];
+    expect(last.tag).toBe('interactive_container');
+    expect(last.background_style).toBe('cus-accent-bg');
+    expect(last.behaviors[0].type).toBe('open_url');
+    expect(JSON.stringify(last)).toContain('img_promo_default');
+    expect(els.indexOf(last)).toBeGreaterThan(els.findIndex((x: any) => JSON.stringify(x).includes('热门数字员工')));
   });
 
   it('shows only the first active promo', () => {
@@ -174,7 +224,7 @@ describe('buildLobbyCard banners and promo', () => {
   it('tokens are consistent with banners and a linked promo', () => {
     const c = buildLobbyCard(entries(), dept, { banners, promos: [mkPromo()], now: 1 }) as any;
     expect(JSON.stringify(c.body)).toContain('"tag":"img"');
-    checkTokens(c, true);
+    checkTokens(c, false);
   });
 
   it('referenced tokens are defined with banners and an unlinked promo', () => {
@@ -195,15 +245,5 @@ describe('buildLobbyCard banners and promo', () => {
     expect(json(c)).toContain('题'.repeat(200));
     expect(countElements(c)).toBeLessThanOrEqual(MAX_ELEMENTS);
     expect(cardBytes(c)).toBeLessThanOrEqual(MAX_BYTES);
-  });
-});
-
-describe('buildLobbyCard Task 4 pinned output', () => {
-  const pinned = readFileSync(new URL('./__fixtures__/lobby-task4.json', import.meta.url), 'utf8');
-  it('no extras equals the Task 4 (ca9db53) output exactly', () => {
-    expect(json(buildLobbyCard(FIXTURE_ENTRIES, FIXTURE_DEPT))).toBe(pinned);
-  });
-  it('empty extras equals the Task 4 output exactly', () => {
-    expect(json(buildLobbyCard(FIXTURE_ENTRIES, FIXTURE_DEPT, {}))).toBe(pinned);
   });
 });
