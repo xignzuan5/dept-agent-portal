@@ -1,13 +1,90 @@
 {
-  "source_size": [1536, 1024],
+  "source_size": [
+    1536,
+    1024
+  ],
   "output_width": 1200,
   "max_bytes": 1048576,
   "images": [
-    { "src": "brand-raw.png",       "out": "brand.png",         "ratio": [2, 1], "center_y": 528 },
-    { "src": "cat-agent-raw.png",   "out": "cat-agent.png",     "ratio": [3, 1], "center_y": 505 },
-    { "src": "cat-skill-raw.png",   "out": "cat-skill.png",     "ratio": [3, 1], "center_y": 500 },
-    { "src": "cat-kb-raw.png",      "out": "cat-kb.png",        "ratio": [3, 1], "center_y": 497 },
-    { "src": "cat-service-raw.png", "out": "cat-service.png",   "ratio": [3, 1], "center_y": 530 },
-    { "src": "promo-raw.png",       "out": "promo-default.png", "ratio": [3, 1], "center_y": 527 }
+    {
+      "src": "brand-raw.png",
+      "out": "brand.png",
+      "ratio": [
+        2,
+        1
+      ],
+      "center_y": 515
+    },
+    {
+      "src": "cat-agent-raw.png",
+      "out": "cat-agent.png",
+      "ratio": [
+        4,
+        1
+      ],
+      "center_y": 522
+    },
+    {
+      "src": "cat-skill-raw.png",
+      "out": "cat-skill.png",
+      "ratio": [
+        4,
+        1
+      ],
+      "center_y": 520
+    },
+    {
+      "src": "cat-kb-raw.png",
+      "out": "cat-kb.png",
+      "ratio": [
+        4,
+        1
+      ],
+      "center_y": 500
+    },
+    {
+      "src": "cat-service-raw.png",
+      "out": "cat-service.png",
+      "ratio": [
+        4,
+        1
+      ],
+      "center_y": 528
+    },
+    {
+      "src": "promo-raw.png",
+      "out": "promo-default.png",
+      "ratio": [
+        1,
+        1
+      ],
+      "center_y": 512,
+      "center_x": 830,
+      "width": 480
+    },
+    {
+      "src": "icon-agent-raw.png",
+      "out": "icons/agent.png",
+      "alpha": true,
+      "width": 256
+    },
+    {
+      "src": "icon-skill-raw.png",
+      "out": "icons/skill.png",
+      "alpha": true,
+      "width": 256
+    },
+    {
+      "src": "icon-kb-raw.png",
+      "out": "icons/kb.png",
+      "alpha": true,
+      "width": 256
+    },
+    {
+      "src": "icon-service-raw.png",
+      "out": "icons/service.png",
+      "alpha": true,
+      "width": 256
+    }
   ]
 }

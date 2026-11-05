@@ -1,10 +1,16 @@
 {
-  "brand": "img_v3_02174_10292d1a-a291-4f5f-aa03-c30716c25d3g",
+  "brand": "img_v3_02175_6cf08090-5d1d-49d7-b06b-61c20a09e9fg",
   "category": {
-    "agent": "img_v3_02174_4cdde9ae-c574-4268-a14e-4d5ac5d5ae3g",
-    "skill": "img_v3_02174_2b1f2580-f392-46fd-85bf-499b05d1d1dg",
-    "kb": "img_v3_02174_0e3738c8-6ad3-4072-b119-f0854766779g",
-    "service": "img_v3_02174_b9869999-5b70-48fe-82bc-54329b6732cg"
+    "agent": "img_v3_02175_e45373fc-88de-47e6-aa33-fe2c3feaaa5g",
+    "skill": "img_v3_02175_d9d0e319-45bb-4d86-a2e7-c5e7a502700g",
+    "kb": "img_v3_02175_484af9a7-2683-469e-b4fd-d6c1043b53cg",
+    "service": "img_v3_02175_0d75dbe8-a42e-4f20-a7e0-8ed889d3ab3g"
   },
-  "promoDefault": "img_v3_02174_59f43800-1e37-49de-ac61-ba9b616d3beg"
+  "promoDefault": "img_v3_02175_bf039a9f-4aa8-4c02-90ec-e9ca1b876dfg",
+  "icons": {
+    "agent": "img_v3_02175_c9ba6347-c014-412c-b50a-c2c736d29abg",
+    "skill": "img_v3_02175_223269dc-d9ca-4a79-bcd3-403a07f8ac1g",
+    "kb": "img_v3_02175_f7609475-84fb-4135-9a31-7c1b50be70bg",
+    "service": "img_v3_02175_ded8e87c-26a1-4974-8d3b-65adcaad8ddg"
+  }
 }
