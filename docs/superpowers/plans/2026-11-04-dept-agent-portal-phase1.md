@@ -424,3 +424,57 @@ export function createPromoSource(opts: {
 - [ ] **Step 2:** `npm test` 全绿(测试不依赖图片内容)。
 - [ ] **Step 3:** 预览:用 lark-cli 上传 6 张新图拿 img_key(只用于预览),用 `data/seed-catalog.json` 经 `parseRecords` 得到的条目 + `DEPT_NAME/DEPT_INTRO` + 运营位「新上线:报价单助手」,构造大厅卡、门户卡(数字员工页、知识库页)发到用户私聊,记录 message_id。
 - [ ] **Step 4:** Commit:`git add assets && git commit -m "feat: sales-themed banners"`
+
+---
+
+## 改版追加(2026-11-05):视觉升级
+
+业务方验收意见「样式太素、不大气、不专业」。设计说明(本节的 Spec):`docs/design/2026-11-05-visual-upgrade.md`。Global Constraints 不变。
+
+### Task 12: 企业级素材(控制者执行)
+
+**Files:**
+- Replace: `assets/banners/brand.png`(2:1)、`cat-*.png`(4:1)、`promo-default.png`(1:1)
+- Create: `assets/icons/{agent,skill,kb,service}.png`(1:1 透明 256×256)
+- Modify: `assets/banners/crop-manifest.json`、`data/banner-keys.json`
+
+- [ ] **Step 1:** 用 codex 内置生图按设计说明「图片素材」生成原图(深蓝哑光 3D、无人物/机器人/文字),人工看图过关。
+- [ ] **Step 2:** 裁切压缩到上表比例尺寸,每张 ≤1MB;图标保留透明通道。
+- [ ] **Step 3:** Task 13 合入后运行 `npm run banners`,`data/banner-keys.json` 含 brand、4 个 category、promoDefault、4 个 icons 共 10 个 `img_` key。
+- [ ] **Step 4:** Commit:`git commit -m "feat: enterprise visual assets"`
+
+### Task 13: 卡片改版(大厅卡 + 门户卡 + 磁贴 + Skill 面板)
+
+**Files:**
+- Modify: `src/cards/theme.ts`、`src/cards/lobby.ts`、`src/cards/portal.ts`、`src/cards/tiles.ts`、`src/cards/banners.ts`、`src/catalog/promos.ts`(`loadBannerKeys` 读 `icons`)、`src/bot/actions.ts`、`src/bot/handlers.ts`、`scripts/upload-banners.ts`、`scripts/send-lobby.ts`
+- Test: 现有 `test/cards/*`、`test/bot/*`、`test/catalog/*` 按新结构更新,并新增下列用例
+
+**Interfaces:**
+- Produces:
+```ts
+// banners.ts
+export interface BannerKeys { brand: string|null; category: Record<Category,string|null>; promoDefault: string|null; icons: Record<Category,string|null>; }
+// actions.ts
+type PortalAction = { v:1; a:'open_portal'; cat?: Category } | …(nav/search 不变)
+// handlers.ts
+export function openPortal(target: Target, deps: HandlerDeps, category?: Category): Promise<CallbackResult>; // 默认 'agent'
+```
+
+- [ ] **Step 1: 写失败测试**(在对应测试文件里):
+  - `decodeAction keeps a valid open_portal cat and drops an invalid one`
+  - `open_portal with cat delivers a portal opened on that category`(deliver 收到的卡 header.subtitle 以「Skill · 」开头)
+  - `lobby has four category entries calling open_portal with agent, skill, kb, service in order`
+  - `lobby hero image is flush with the header (margin top -12px) and header has no count tag`
+  - `no card contains a person element`(大厅 + 四个分类门户)
+  - `portal hides the pager when there is one page and shows it when there are 9 entries`
+  - `portal hides the category banner when searching or past page 1`
+  - `no portal card text contains 仅你可见`
+  - `current tab is primary_filled and the other three are text`
+  - `entry tags render as neutral text_tag`
+  - `skill detail converts 【标题】 to a bold line and caps at 400 chars ending with …完整说明见文档`
+  - `loadBannerKeys returns null icons when the file has none`
+  - 预算:`worst-case skill page (8 entries, 1500-char details) stays within 200 elements and 28KB`(已有则保留)
+- [ ] **Step 2:** Run `npm test` — Expected: 新用例 FAIL。
+- [ ] **Step 3:** 按设计说明实现(色板、大厅、门户、磁贴、Skill 面板、交互变化);`upload-banners.ts` 额外上传 `assets/icons/*.png`(存在才传)写入 `icons`;`send-lobby.ts` 的运营位 `imageTimeoutMs` 改 15000(一次性脚本不受 3 秒回调限制)。
+- [ ] **Step 4:** Run `npm test` 与 `npx tsc --noEmit` — Expected: 全部 PASS。
+- [ ] **Step 5:** Commit:`git commit -m "feat: enterprise visual redesign of lobby and portal cards"`
