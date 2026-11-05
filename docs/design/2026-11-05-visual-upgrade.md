@@ -74,7 +74,7 @@
      |---|---|
      | 数字员工 | 帮你干活的 AI 同事 |
      | Skill | 即装即用的销售技能 |
-     | 知识库 | 产品、报价、案例一处查 |
+     | 知识库 | 产品、报价与案例 |
      | 团队服务 | 审批与售前支持 |
 
 4. **主按钮**「打开门户」:`primary_filled`,`width: fill`,`size: large`。点击值保持 `{v:1, a:"open_portal"}`,即打开数字员工分类。
@@ -139,3 +139,53 @@
 
 - 大厅卡与门户卡都必须 ≤200 元素、≤28KB,门户卡按「Skill 页 8 条且详情最长」的情况计算。
 - 现有 `src/cards/budget.ts` 的门限不变,超预算时按 Skill 详情收缩规则处理。
+
+---
+
+## 第二轮:彩色主题(2026-11-05,覆盖上文相应条目)
+
+业务方真机反馈:「还是很素雅,没有色彩、开心的感觉,太淡了」。业务方已选定:**A 实心彩块** + 主按钮**镭射渐变**。上文结构不变,颜色按本节改。
+
+### 分类色(全局固定,同色同义)
+
+| 分类 | 色名 | 实心块 | 浅底 | 细线 / 标签 |
+|---|---|---|---|---|
+| 数字员工 `agent` | blue | `blue-500` | `blue-50` | `blue-100` / `blue` |
+| Skill `skill` | violet | `violet-500` | `violet-50` | `violet-100` / `violet` |
+| 知识库 `kb` | turquoise | `turquoise-500` | `turquoise-50` | `turquoise-100` / `turquoise` |
+| 团队服务 `service` | orange | `orange-500` | `orange-50` | `orange-100` / `orange` |
+
+都是飞书枚举色,深色模式由客户端自动适配。
+
+### 素材
+
+改为鲜艳光泽 3D,每张分类图用本分类主色渐变,图标也各用本分类色。比例、尺寸和文件名不变。
+
+### 大厅卡
+
+- **header**:`template: violet`,与彩色头图呼应。
+- **入口格**:每格 `background_style: <色>-500`,`has_border: false`。名称、数量、一句话全部改白字(`<font color='white'>`)。图标保持不变。
+- **主按钮「打开门户」**:`type: laser`,`size: large`,`width: fill`。全卡只有这一处镭射。
+- **热门磁贴**:属数字员工,用 blue 浅底。
+- **运营横条**:`background_style: violet-50`,标签 `violet`。
+
+### 门户卡
+
+- `header.template` 用当前分类色,header 标签也用分类色(知识库、团队服务不再用 neutral)。
+- 分类切换的当前按钮仍用 `primary_filled`。按钮只有蓝和红两种实心色,不跟分类变色。
+
+### 磁贴
+
+- `background_style: <分类色>-50`,`border_color: <分类色>-100`。
+- 标签改为 `<text_tag color='<分类色>'>`,不再用 neutral。
+- 名称墨色、简介灰色不变。
+- 无链接时同样用分类浅底。
+
+### Skill 面板
+
+- `header.background_color: violet-50`,`border.color: violet-100`。
+- 标签用 `violet`。
+
+### 色板
+
+`cus-surface`、`cus-line`、`cus-accent-bg` 不再使用,删除;`cus-ink`、`cus-muted` 保留。覆盖测试照旧:定义的 token 必须都被用到。

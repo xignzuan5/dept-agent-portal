@@ -13,7 +13,7 @@
         2,
         1
       ],
-      "center_y": 515
+      "center_y": 560
     },
     {
       "src": "cat-agent-raw.png",
@@ -22,7 +22,7 @@
         4,
         1
       ],
-      "center_y": 522
+      "center_y": 499
     },
     {
       "src": "cat-skill-raw.png",
@@ -31,7 +31,7 @@
         4,
         1
       ],
-      "center_y": 520
+      "center_y": 510
     },
     {
       "src": "cat-kb-raw.png",
@@ -40,7 +40,7 @@
         4,
         1
       ],
-      "center_y": 500
+      "center_y": 540
     },
     {
       "src": "cat-service-raw.png",
@@ -49,7 +49,7 @@
         4,
         1
       ],
-      "center_y": 528
+      "center_y": 523
     },
     {
       "src": "promo-raw.png",
@@ -59,7 +59,7 @@
         1
       ],
       "center_y": 512,
-      "center_x": 830,
+      "center_x": 780,
       "width": 480
     },
     {

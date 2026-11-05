@@ -478,3 +478,20 @@ export function openPortal(target: Target, deps: HandlerDeps, category?: Categor
 - [ ] **Step 3:** 按设计说明实现(色板、大厅、门户、磁贴、Skill 面板、交互变化);`upload-banners.ts` 额外上传 `assets/icons/*.png`(存在才传)写入 `icons`;`send-lobby.ts` 的运营位 `imageTimeoutMs` 改 15000(一次性脚本不受 3 秒回调限制)。
 - [ ] **Step 4:** Run `npm test` 与 `npx tsc --noEmit` — Expected: 全部 PASS。
 - [ ] **Step 5:** Commit:`git commit -m "feat: enterprise visual redesign of lobby and portal cards"`
+
+### Task 14: 彩色主题(第二轮改版)
+
+Spec:`docs/design/2026-11-05-visual-upgrade.md`「第二轮:彩色主题」一节。素材(鲜艳版)由控制者生成、裁切、上传,已提交。
+
+**Files:** Modify `src/cards/theme.ts`(分类色映射 + 删除不再用的 token)、`src/cards/lobby.ts`、`src/cards/portal.ts`、`src/cards/tiles.ts`、`src/cards/banners.ts`;Test:相应测试。
+
+- [ ] **Step 1: 写失败测试**
+  - `each lobby entry uses its category solid colour (blue/violet/turquoise/orange-500) with white text and no border`
+  - `lobby header is violet and the open-portal button is laser`
+  - `portal header template and header tag follow the category colour`
+  - `tiles use the category -50 background, -100 border and category-coloured tags`(agent、kb 各测一次)
+  - `skill panel header uses violet-50 with violet-100 border`
+  - `promo strip uses violet-50`
+  - 已有的 token 覆盖测试保持通过
+- [ ] **Step 2:** 实现;`npm test`、`npx tsc --noEmit` 全绿;预算测试仍通过。
+- [ ] **Step 3:** Commit:`git commit -m "feat: colourful category theme for lobby and portal"`
