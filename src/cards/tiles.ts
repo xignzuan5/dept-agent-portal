@@ -1,5 +1,5 @@
-import type { CatalogEntry } from '../catalog/types.js';
-import { categoryIcon, muted } from './theme.js';
+import type { Category, CatalogEntry } from '../catalog/types.js';
+import { CATEGORY_COLOR, categoryIcon, muted, shade } from './theme.js';
 
 const SUMMARY_MAX = 60;
 const TILE_TAGS_MAX = 2;
@@ -17,8 +17,8 @@ export function safe(s: string): string {
   return s.replace(/</g, '＜').replace(/>/g, '＞');
 }
 
-function tagsMarkdown(tags: string[]): string {
-  return tags.map((t) => `<text_tag color='neutral'>${safe(t)}</text_tag>`).join(' ');
+function tagsMarkdown(tags: string[], cat: Category): string {
+  return tags.map((t) => `<text_tag color='${CATEGORY_COLOR[cat]}'>${safe(t)}</text_tag>`).join(' ');
 }
 
 const inkBold = (s: string): string => `**<font color='cus-ink'>${safe(s)}</font>**`;
@@ -40,13 +40,7 @@ export function formatDetail(detail: string, max: number): string {
   return cut + DETAIL_SUFFIX;
 }
 
-const SURFACE = {
-  background_style: 'cus-surface',
-  has_border: true,
-  border_color: 'cus-line',
-  corner_radius: '10px',
-  padding: '12px 12px 12px 12px',
-};
+const TILE_PADDING = '12px 12px 12px 12px';
 
 /** 数字员工 / 知识库 / 团队服务磁贴:左图标,右名称 / 简介 / 标签。iconKey 缺失时退回 standard_icon。 */
 export function entryTile(e: CatalogEntry, iconKey?: string | null): object {
@@ -61,7 +55,7 @@ export function entryTile(e: CatalogEntry, iconKey?: string | null): object {
     right.push({ tag: 'markdown', content: muted(safe(truncate(e.summary, SUMMARY_MAX))), text_size: 'caption' });
   }
   const tags = e.tags.slice(0, TILE_TAGS_MAX);
-  if (tags.length > 0) right.push({ tag: 'markdown', content: tagsMarkdown(tags) });
+  if (tags.length > 0) right.push({ tag: 'markdown', content: tagsMarkdown(tags, e.category) });
   if (!e.link) right.push({ tag: 'markdown', content: muted('链接未配置'), text_size: 'caption' });
 
   const columns: object[] = [];
@@ -91,12 +85,16 @@ export function entryTile(e: CatalogEntry, iconKey?: string | null): object {
     return {
       tag: 'interactive_container',
       width: 'fill',
-      ...SURFACE,
+      background_style: shade(e.category, 50),
+      has_border: true,
+      border_color: shade(e.category, 100),
+      corner_radius: '10px',
+      padding: TILE_PADDING,
       behaviors: [{ type: 'open_url', default_url: e.link }],
       elements: [row],
     };
   }
-  // 无链接:不可点,同样的面(column 不支持边框/圆角,只给底色)
+  // 无链接:不可点,同样的浅底(column 不支持边框/圆角,只给底色)
   return {
     tag: 'column_set',
     flex_mode: 'none',
@@ -105,8 +103,8 @@ export function entryTile(e: CatalogEntry, iconKey?: string | null): object {
         tag: 'column',
         width: 'weighted',
         weight: 1,
-        background_style: 'cus-surface',
-        padding: SURFACE.padding,
+        background_style: shade(e.category, 50),
+        padding: TILE_PADDING,
         elements: [row],
       },
     ],
@@ -130,11 +128,11 @@ export function skillPanel(e: CatalogEntry, detailMax: number = DETAIL_MAX, icon
   }
   const detail = e.detail ? formatDetail(e.detail, detailMax) : '';
   if (detail) elements.push({ tag: 'markdown', content: safe(detail), text_size: 'body' });
-  if (e.tags.length > 0) elements.push({ tag: 'markdown', content: tagsMarkdown(e.tags) });
+  if (e.tags.length > 0) elements.push({ tag: 'markdown', content: tagsMarkdown(e.tags, 'skill') });
 
   const header: Record<string, unknown> = {
     title: { tag: 'markdown', content: `**${safe(e.name)}**` },
-    background_color: 'cus-surface',
+    background_color: shade('skill', 50),
   };
   if (iconKey) {
     header.icon = { tag: 'custom_icon', img_key: iconKey };
@@ -144,7 +142,7 @@ export function skillPanel(e: CatalogEntry, detailMax: number = DETAIL_MAX, icon
     tag: 'collapsible_panel',
     expanded: false,
     header,
-    border: { color: 'cus-line', corner_radius: '10px' },
+    border: { color: shade('skill', 100), corner_radius: '10px' },
     vertical_spacing: '8px',
     padding: '8px 12px 12px 12px',
     elements,

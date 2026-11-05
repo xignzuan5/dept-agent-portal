@@ -22,9 +22,9 @@ describe('entryTile', () => {
   it('linked entry is a surface interactive_container opening its link', () => {
     const t = entryTile(entry()) as any;
     expect(t.tag).toBe('interactive_container');
-    expect(t.background_style).toBe('cus-surface');
+    expect(t.background_style).toBe('blue-50');
     expect(t.has_border).toBe(true);
-    expect(t.border_color).toBe('cus-line');
+    expect(t.border_color).toBe('blue-100');
     expect(t.corner_radius).toBe('10px');
     expect(t.behaviors).toEqual([{ type: 'open_url', default_url: 'https://example.com/x' }]);
     expect(json(t)).toContain("**<font color='cus-ink'>周报助手</font>**");
@@ -50,7 +50,7 @@ describe('entryTile', () => {
   it('unlinked entry is not clickable, uses the same surface, and shows 链接未配置', () => {
     const t = entryTile(entry({ link: null })) as any;
     expect(t.tag).toBe('column_set');
-    expect(t.columns[0].background_style).toBe('cus-surface');
+    expect(t.columns[0].background_style).toBe('blue-50');
     expect(json(t)).not.toContain('open_url');
     expect(json(t)).toContain('链接未配置');
   });
@@ -62,10 +62,13 @@ describe('entryTile', () => {
     expect(json(entryTile(entry({ summary: '字'.repeat(60) })))).not.toContain('…');
   });
 
-  it('at most 2 tags shown, as neutral text_tag', () => {
+  it('tiles use the category -50 background, -100 border and category-coloured tags (agent, kb)', () => {
     const t = json(entryTile(entry({ tags: ['a1', 'b2', 'c3'] })));
     expect(t.match(/<text_tag/g)).toHaveLength(2);
-    expect(t.match(/<text_tag color='neutral'>/g)).toHaveLength(2);
+    expect(t.match(/<text_tag color='blue'>/g)).toHaveLength(2);
+    const kb = entryTile(entry({ category: 'kb', tags: ['k1'] })) as any;
+    expect(kb).toMatchObject({ background_style: 'turquoise-50', border_color: 'turquoise-100' });
+    expect(json(kb)).toContain("<text_tag color='turquoise'>k1</text_tag>");
     expect(t).not.toContain('c3');
   });
 
@@ -85,8 +88,8 @@ describe('skillPanel', () => {
     expect(p.tag).toBe('collapsible_panel');
     expect(p.expanded).toBe(false);
     expect(p.header.title.content).toBe('**代码评审**');
-    expect(p.header.background_color).toBe('cus-surface');
-    expect(p.border).toEqual({ color: 'cus-line', corner_radius: '10px' });
+    expect(p.header.background_color).toBe('violet-50');
+    expect(p.border).toEqual({ color: 'violet-100', corner_radius: '10px' });
     expect(p.header.icon).toBeUndefined();
     expect(json(p.elements)).toContain('详细说明正文');
   });
@@ -101,7 +104,7 @@ describe('skillPanel', () => {
     expect(p.elements.map((x: any) => x.tag)).toEqual(['markdown', 'button', 'markdown', 'markdown']);
     expect(p.elements[0].content).toContain('帮你评审');
     expect(p.elements[1].type).toBe('primary');
-    expect(p.elements[3].content).toContain("<text_tag color='neutral'>x1</text_tag>");
+    expect(p.elements[3].content).toContain("<text_tag color='violet'>x1</text_tag>");
   });
 
   it('skill detail converts 【标题】 to a bold line and caps at 400 chars ending with …完整说明见文档', () => {

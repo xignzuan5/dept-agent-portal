@@ -40,7 +40,9 @@ describe('buildPortalCard', () => {
     expect(sk.header.subtitle.content.startsWith('Skill · ')).toBe(true);
     expect(sk.header.text_tag_list[0].color).toBe('violet');
     const kb = build([e({ category: 'kb' })], view({ category: 'kb' })).card as any;
-    expect(kb.header.text_tag_list[0].color).toBe('neutral');
+    expect(kb.header.text_tag_list[0].color).toBe('turquoise');
+    expect((kb.header as any).template).toBe('turquoise');
+    expect((build([e({ category: 'service' })], view({ category: 'service' })).card as any).header.template).toBe('orange');
     const q = build([e({ name: '报价员' }), e()], view({ query: '报价' })).card as any;
     expect(q.header.subtitle.content).toBe('数字员工 · 搜索“报价” · 1 项');
   });
@@ -96,10 +98,10 @@ describe('buildPortalCard', () => {
     expect(json(c9)).toContain("<font color='cus-muted'>第 1/2 页</font>");
   });
 
-  it('entry tags render as neutral text_tag', () => {
+  it('entry tags render in the category colour', () => {
     const s = json(build(many(2, { tags: ['a1', 'b2'] })).card);
-    expect(s).toContain("<text_tag color='neutral'>a1</text_tag>");
-    expect(s).not.toContain("<text_tag color='blue'>");
+    expect(s).toContain("<text_tag color='blue'>a1</text_tag>");
+    expect(s).not.toContain('neutral');
   });
 
   it('opens on a skill category with icon header and panels using the icon key', () => {

@@ -39,7 +39,7 @@ describe('promoBlock', () => {
   it('with link is a clickable accent strip with a 1:1 thumbnail', () => {
     const b = promoBlock(promo(), null) as any;
     expect(b.tag).toBe('interactive_container');
-    expect(b.background_style).toBe('cus-accent-bg');
+    expect(b.background_style).toBe('violet-50');
     expect(b.corner_radius).toBe('10px');
     expect(b.behaviors).toEqual([{ type: 'open_url', default_url: 'https://example.com/p' }]);
     const img = b.elements[0].columns[0].elements[0];
@@ -58,7 +58,7 @@ describe('promoBlock', () => {
     expect(s).not.toContain('open_url');
     expect(s).not.toContain('interactive_container');
     expect(s).toContain('img_p');
-    expect(s).toContain('cus-accent-bg');
+    expect(s).toContain('violet-50');
   });
 
   it('falls back to the default thumbnail, and renders text-only when there is no image at all', () => {

@@ -2,7 +2,7 @@ import { CATEGORIES, CATEGORY_LABEL, type Category, type CatalogEntry } from '..
 import { bannerImg, type BannerKeys } from './banners.js';
 import { cardBytes, MAX_BYTES } from './budget.js';
 import type { DeptInfo } from './lobby.js';
-import { CATEGORY_TAG_COLOR, cardConfig, muted } from './theme.js';
+import { CATEGORY_COLOR, cardConfig, muted } from './theme.js';
 import { entryTile, safe, skillPanel } from './tiles.js';
 
 export const PAGE_SIZE = 8;
@@ -157,10 +157,10 @@ function render(
     header: {
       title: { tag: 'plain_text', content: `${dept.name}数字员工门户` },
       subtitle: { tag: 'plain_text', content: subtitle },
-      template: 'blue',
+      template: CATEGORY_COLOR[view.category],
       icon: { tag: 'standard_icon', token: 'myai_colorful' },
       text_tag_list: [
-        { tag: 'text_tag', text: { tag: 'plain_text', content: label }, color: CATEGORY_TAG_COLOR[view.category] },
+        { tag: 'text_tag', text: { tag: 'plain_text', content: label }, color: CATEGORY_COLOR[view.category] },
       ],
     },
     body: { direction: 'vertical', padding: '12px 12px 20px 12px', vertical_spacing: '12px', elements },

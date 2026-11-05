@@ -1,5 +1,5 @@
 import type { Category } from '../catalog/types.js';
-import { muted } from './theme.js';
+import { CATEGORY_COLOR, muted, shade } from './theme.js';
 import { safe } from './tiles.js';
 
 export interface BannerKeys {
@@ -70,7 +70,7 @@ export function promoBlock(p: Promo, fallbackImgKey: string | null): object {
     vertical_align: 'center',
     vertical_spacing: '2px',
     elements: [
-      { tag: 'markdown', content: `<text_tag color='violet'>新上线</text_tag> **${safe(p.title)}**` },
+      { tag: 'markdown', content: `<text_tag color='${CATEGORY_COLOR.skill}'>新上线</text_tag> **${safe(p.title)}**` },
       { tag: 'markdown', content: muted(safe(p.subtitle)), text_size: 'caption' },
     ],
   });
@@ -79,7 +79,7 @@ export function promoBlock(p: Promo, fallbackImgKey: string | null): object {
     return {
       tag: 'interactive_container',
       width: 'fill',
-      background_style: 'cus-accent-bg',
+      background_style: shade('skill', 50),
       corner_radius: '10px',
       padding: '12px 12px 12px 12px',
       behaviors: [{ type: 'open_url', default_url: p.link }],
@@ -95,7 +95,7 @@ export function promoBlock(p: Promo, fallbackImgKey: string | null): object {
         tag: 'column',
         width: 'weighted',
         weight: 1,
-        background_style: 'cus-accent-bg',
+        background_style: shade('skill', 50),
         padding: '12px 12px 12px 12px',
         elements: [row],
       },

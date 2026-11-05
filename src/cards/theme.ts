@@ -2,7 +2,7 @@ import type { Category } from '../catalog/types.js';
 
 const c = (light: string, dark: string) => ({ light_mode: light, dark_mode: dark });
 
-/** 卡片全局配置:字号档位 + 深浅色自适应的自定义色板(蓝只做主操作,紫只给 Skill/新上线)。 */
+/** 卡片全局配置:字号档位 + 深浅色自适应的自定义色板(ink/muted;分类色直接用飞书枚举色,见 CATEGORY_COLOR)。 */
 export function cardConfig(): object {
   return {
     update_multi: true,
@@ -16,9 +16,6 @@ export function cardConfig(): object {
       color: {
         'cus-ink': c('rgba(31,35,41,1)', 'rgba(235,238,242,1)'),
         'cus-muted': c('rgba(100,106,115,1)', 'rgba(150,155,163,1)'),
-        'cus-surface': c('rgba(245,247,250,1)', 'rgba(255,255,255,0.06)'),
-        'cus-line': c('rgba(31,35,41,0.08)', 'rgba(255,255,255,0.12)'),
-        'cus-accent-bg': c('rgba(102,78,255,0.08)', 'rgba(160,140,255,0.16)'),
       },
     },
   };
@@ -42,10 +39,16 @@ export function categoryIcon(cat: Category, imgKey: string | null | undefined): 
 /** 灰字(正文/辅助信息),可选 caption 字号由调用方的 text_size 决定。 */
 export const muted = (s: string): string => `<font color='cus-muted'>${s}</font>`;
 
-/** 门户 header 的当前分类标签色:数字员工蓝、Skill 紫、其余中性。 */
-export const CATEGORY_TAG_COLOR: Record<Category, string> = {
+/** 分类色(全局固定,同色同义):全部来自飞书枚举色,深色模式由客户端适配。 */
+export const CATEGORY_COLOR: Record<Category, 'blue' | 'violet' | 'turquoise' | 'orange'> = {
   agent: 'blue',
   skill: 'violet',
-  kb: 'neutral',
-  service: 'neutral',
+  kb: 'turquoise',
+  service: 'orange',
 };
+
+/** 分类色的某一档,如 shade('agent', 50) -> 'blue-50'。 */
+export const shade = (cat: Category, n: 50 | 100 | 500): string => `${CATEGORY_COLOR[cat]}-${n}`;
+
+/** 白字(实心彩块上)。 */
+export const white = (s: string): string => `<font color='white'>${s}</font>`;

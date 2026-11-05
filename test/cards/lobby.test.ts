@@ -38,7 +38,7 @@ describe('buildLobbyCard', () => {
     expect(c.schema).toBe('2.0');
     expect(c.header.title.content).toBe('智能平台部数字员工门户');
     expect(c.header.subtitle.content).toBe(dept.intro);
-    expect(c.header.template).toBe('blue');
+    expect(c.header.template).toBe('violet');
     expect(c.header.text_tag_list).toBeUndefined();
   });
 
@@ -51,12 +51,19 @@ describe('buildLobbyCard', () => {
     expect(cells.map((x) => x.behaviors[0].type)).toEqual(['callback', 'callback', 'callback', 'callback']);
     const grid = c.body.elements.filter((x: any) => x.tag === 'column_set').slice(0, 2);
     expect(grid.map((g: any) => g.columns.length)).toEqual([2, 2]);
-    expect(cells[0]).toMatchObject({ background_style: 'cus-surface', has_border: true, border_color: 'cus-line', corner_radius: '10px' });
+    expect(cells.map((x) => x.background_style)).toEqual(['blue-500', 'violet-500', 'turquoise-500', 'orange-500']);
+    for (const x of cells) {
+      expect(x).toMatchObject({ has_border: false, corner_radius: '10px' });
+      expect(x.border_color).toBeUndefined();
+      const s = JSON.stringify(x.elements);
+      expect(s).toContain("<font color='white'>");
+      expect(s).not.toContain('cus-');
+    }
     const txt = cells.map((x) => JSON.stringify(x.elements));
     expect(txt[0]).toContain('数字员工');
-    expect(txt[0]).toContain("<font color='cus-muted'>2</font>");
-    expect(txt[1]).toContain("<font color='cus-muted'>1</font>");
-    expect(txt[3]).toContain("<font color='cus-muted'>0</font>");
+    expect(txt[0]).toContain("<font color='white'>2</font>");
+    expect(txt[1]).toContain("<font color='white'>1</font>");
+    expect(txt[3]).toContain("<font color='white'>0</font>");
     expect(txt.map((t) => ['帮你干活的 AI 同事', '即装即用的销售技能', '产品、报价与案例', '审批与售前支持'].some((w) => t.includes(w)))).toEqual([true, true, true, true]);
   });
 
@@ -105,10 +112,16 @@ describe('buildLobbyCard', () => {
     expect(all.behaviors).toEqual([{ type: 'callback', value: { v: 1, a: 'open_portal', cat: 'agent' } }]);
   });
 
+  it('lobby header is violet and the open-portal button is laser (the only laser)', () => {
+    const c = buildLobbyCard([e()], dept) as any;
+    expect(c.header.template).toBe('violet');
+    expect(json(c).match(/"type":"laser"/g)).toHaveLength(1);
+  });
+
   it('has the open_portal main button (no cat), large and filled', () => {
     const c = buildLobbyCard([e()], dept);
     const b = find(c, (o) => o.tag === 'button' && o.text.content === '打开门户')[0];
-    expect(b).toMatchObject({ type: 'primary_filled', width: 'fill', size: 'large' });
+    expect(b).toMatchObject({ type: 'laser', width: 'fill', size: 'large' });
     expect(b.behaviors).toEqual([{ type: 'callback', value: { v: 1, a: 'open_portal' } }]);
   });
 
@@ -121,7 +134,7 @@ describe('buildLobbyCard', () => {
 
   it('empty catalog renders zero counts and no hot section', () => {
     const c = buildLobbyCard([], dept) as any;
-    expect(json(c)).toContain("<font color='cus-muted'>0</font>");
+    expect(json(c)).toContain("<font color='white'>0</font>");
     expect(json(c)).not.toContain('热门数字员工');
     expect(json(c)).toContain('打开门户');
   });
@@ -187,7 +200,7 @@ describe('buildLobbyCard banners and promo', () => {
     expect(els[0].tag).toBe('img');
     const last = els[els.length - 1];
     expect(last.tag).toBe('interactive_container');
-    expect(last.background_style).toBe('cus-accent-bg');
+    expect(last.background_style).toBe('violet-50');
     expect(last.behaviors[0].type).toBe('open_url');
     expect(JSON.stringify(last)).toContain('img_promo_default');
     expect(els.indexOf(last)).toBeGreaterThan(els.findIndex((x: any) => JSON.stringify(x).includes('热门数字员工')));

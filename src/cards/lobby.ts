@@ -1,6 +1,6 @@
 import { CATEGORIES, CATEGORY_LABEL, type Category, type CatalogEntry } from '../catalog/types.js';
 import { activePromos, bannerImg, promoBlock, type BannerKeys, type Promo } from './banners.js';
-import { cardConfig, categoryIcon, muted } from './theme.js';
+import { cardConfig, categoryIcon, shade, white } from './theme.js';
 import { entryTile } from './tiles.js';
 
 export interface DeptInfo {
@@ -34,8 +34,8 @@ const CATEGORY_BLURB: Record<Category, string> = {
 
 /** 单个入口格:点击发 open_portal + cat,直达该分类。有图标 key 时与磁贴同构(左图右文),否则 standard_icon 兜底。 */
 function entryCell(c: Category, count: number, iconKey: string | null): object {
-  const nameMd = `**<font color='cus-ink'>${CATEGORY_LABEL[c]}</font>** ${muted(String(count))}`;
-  const blurb = { tag: 'markdown', content: muted(CATEGORY_BLURB[c]), text_size: 'caption' };
+  const nameMd = `**${white(CATEGORY_LABEL[c])}** ${white(String(count))}`;
+  const blurb = { tag: 'markdown', content: white(CATEGORY_BLURB[c]), text_size: 'caption' };
   const inner: object[] = iconKey
     ? [
         {
@@ -75,9 +75,8 @@ function entryCell(c: Category, count: number, iconKey: string | null): object {
   return {
     tag: 'interactive_container',
     width: 'fill',
-    background_style: 'cus-surface',
-    has_border: true,
-    border_color: 'cus-line',
+    background_style: shade(c, 500),
+    has_border: false,
     corner_radius: '10px',
     padding: '12px 12px 12px 12px',
     behaviors: [{ type: 'callback', value: { v: 1, a: 'open_portal', cat: c } }],
@@ -108,7 +107,7 @@ function actions(dept: DeptInfo): object {
   const portal = {
     tag: 'button',
     text: { tag: 'plain_text', content: '打开门户' },
-    type: 'primary_filled',
+    type: 'laser',
     size: 'large',
     width: 'fill',
     behaviors: [{ type: 'callback', value: { v: 1, a: 'open_portal' } }],
@@ -198,7 +197,7 @@ export function buildLobbyCard(entries: CatalogEntry[], dept: DeptInfo, extras?:
     header: {
       title: { tag: 'plain_text', content: `${dept.name}数字员工门户` },
       subtitle: { tag: 'plain_text', content: dept.intro },
-      template: 'blue',
+      template: 'violet',
       icon: { tag: 'standard_icon', token: 'myai_colorful' },
     },
     body: { direction: 'vertical', padding: '12px 12px 20px 12px', vertical_spacing: '12px', elements },
