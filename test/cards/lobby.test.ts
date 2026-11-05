@@ -65,8 +65,15 @@ describe('buildLobbyCard', () => {
     const bn: BannerKeys = { brand: null, category: { agent: null, skill: null, kb: null, service: null }, promoDefault: null, icons };
     const cells = find(buildLobbyCard([e()], dept, { banners: bn }), (o) => o.tag === 'interactive_container' && o.behaviors?.[0]?.value?.cat);
     const img = (x: any) => find(x, (o) => o.tag === 'img')[0];
-    expect(img(cells[0])).toMatchObject({ img_key: 'ia', size: 'small', transparent: true, corner_radius: '8px' });
-    expect(cells[0].elements[0].columns[0].width).toBe('auto');
+    expect(img(cells[0])).toMatchObject({ img_key: 'ia', size: '28px 28px', transparent: true, scale_type: 'crop_center', corner_radius: '6px' });
+    const row = cells[0].elements[0];
+    expect(row).toMatchObject({ tag: 'column_set', flex_mode: 'none', horizontal_spacing: '8px' });
+    expect(row.columns[0].width).toBe('auto');
+    expect(row.columns[1]).toMatchObject({ width: 'weighted', vertical_align: 'center' });
+    expect(JSON.stringify(row.columns[1])).toContain('数字员工');
+    expect(JSON.stringify(row)).not.toContain('帮你干活');
+    expect(cells[0].elements[1]).toMatchObject({ tag: 'markdown', text_size: 'caption' });
+    expect(cells[0].elements[1].content).toContain('帮你干活');
     expect(find(cells[1], (o) => o.tag === 'img')).toHaveLength(0);
     expect(find(cells[1], (o) => o.tag === 'standard_icon')).toHaveLength(1);
     expect(img(cells[2]).img_key).toBe('ik');
