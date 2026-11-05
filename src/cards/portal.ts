@@ -42,6 +42,7 @@ function tabs(view: PortalView): object {
       tag: 'column',
       width: 'weighted',
       weight: 1,
+      horizontal_align: 'center',
       elements: [
         {
           tag: 'button',
@@ -154,7 +155,7 @@ function render(
     schema: '2.0',
     config: cardConfig(),
     header: {
-      title: { tag: 'plain_text', content: `${dept.name} · 门户` },
+      title: { tag: 'plain_text', content: `${dept.name}数字员工门户` },
       subtitle: { tag: 'plain_text', content: subtitle },
       template: 'blue',
       icon: { tag: 'standard_icon', token: 'myai_colorful' },

@@ -14,13 +14,10 @@ export function cardConfig(): object {
         caption: { default: 'notation', pc: 'notation', mobile: 'notation' },
       },
       color: {
-        'cus-primary': c('rgba(30,120,255,1)', 'rgba(80,150,255,1)'),
-        'cus-primary-bg': c('rgba(30,120,255,0.08)', 'rgba(80,150,255,0.14)'),
         'cus-ink': c('rgba(31,35,41,1)', 'rgba(235,238,242,1)'),
         'cus-muted': c('rgba(100,106,115,1)', 'rgba(150,155,163,1)'),
         'cus-surface': c('rgba(245,247,250,1)', 'rgba(255,255,255,0.06)'),
         'cus-line': c('rgba(31,35,41,0.08)', 'rgba(255,255,255,0.12)'),
-        'cus-accent': c('rgba(102,78,255,1)', 'rgba(160,140,255,1)'),
         'cus-accent-bg': c('rgba(102,78,255,0.08)', 'rgba(160,140,255,0.16)'),
       },
     },

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildPortalCard, filterEntries, PAGE_SIZE } from '../../src/cards/portal.js';
+import { buildLobbyCard } from '../../src/cards/lobby.js';
 import { cardBytes, countElements, MAX_BYTES, MAX_ELEMENTS } from '../../src/cards/budget.js';
 import { cardConfig } from '../../src/cards/theme.js';
 import type { BannerKeys } from '../../src/cards/banners.js';
@@ -31,7 +32,7 @@ describe('buildPortalCard', () => {
   it('header: category tag and p2p-style subtitle for browsing and searching', () => {
     const { card } = build(many(3)) as any;
     expect(card.schema).toBe('2.0');
-    expect(card.header.title.content).toBe('智能平台部 · 门户');
+    expect(card.header.title.content).toBe('智能平台部数字员工门户');
     expect(card.header.subtitle.content).toBe('数字员工 · 3 项 · 你的专属门户');
     expect(card.header.text_tag_list).toHaveLength(1);
     expect(card.header.text_tag_list[0]).toMatchObject({ text: { content: '数字员工' }, color: 'blue' });
@@ -223,5 +224,18 @@ describe('buildPortalCard', () => {
     expect(defined).not.toContain('cus-primary-border');
     expect(s).not.toContain('cus-primary-border');
     for (const t of new Set(s.match(/cus-[a-z-]+/g))) expect(defined).toContain(t);
+  });
+});
+
+describe('colour token coverage', () => {
+  it('every token defined in cardConfig is used by some card across the lobby and four portal categories', () => {
+    const b: BannerKeys = { brand: 'b', category: { agent: 'k', skill: 'k', kb: 'k', service: 'k' }, promoDefault: 'p', icons: { agent: 'i', skill: 'i', kb: 'i', service: 'i' } };
+    const es = (['agent', 'skill', 'kb', 'service'] as const).flatMap((category) => many(3, { category, hot: true }));
+    const cards: object[] = [
+      buildLobbyCard(es, dept, { banners: b, promos: [{ id: 'p', title: 't', subtitle: 's', link: null, imgKey: null, start: null, end: null, order: 1 }], now: 1 }),
+      ...(['agent', 'skill', 'kb', 'service'] as const).map((category) => build(es, view({ category }), b).card),
+    ];
+    const used = new Set(cards.flatMap((c: any) => json({ header: c.header, body: c.body }).match(/cus-[a-z-]+/g) ?? []));
+    for (const t of Object.keys((cardConfig() as any).style.color)) expect(used).toContain(t);
   });
 });

@@ -28,12 +28,62 @@ function pickHotAgents(entries: CatalogEntry[]): CatalogEntry[] {
 const CATEGORY_BLURB: Record<Category, string> = {
   agent: '帮你干活的 AI 同事',
   skill: '即装即用的销售技能',
-  kb: '产品、报价、案例一处查',
+  kb: '产品、报价与案例',
   service: '审批与售前支持',
 };
 
-/** 单个入口格:点击发 open_portal + cat,直达该分类。 */
+/** 单个入口格:点击发 open_portal + cat,直达该分类。有图标 key 时与磁贴同构(左图右文),否则 standard_icon 兜底。 */
 function entryCell(c: Category, count: number, iconKey: string | null): object {
+  const nameMd = `**<font color='cus-ink'>${CATEGORY_LABEL[c]}</font>** ${muted(String(count))}`;
+  const blurb = { tag: 'markdown', content: muted(CATEGORY_BLURB[c]), text_size: 'caption' };
+  const inner: object = iconKey
+    ? {
+        tag: 'column_set',
+        flex_mode: 'none',
+        horizontal_spacing: '12px',
+        columns: [
+          {
+            tag: 'column',
+            width: 'auto',
+            vertical_align: 'top',
+            elements: [
+              {
+                tag: 'img',
+                img_key: iconKey,
+                alt: { tag: 'plain_text', content: '' },
+                scale_type: 'crop_center',
+                size: 'small',
+                corner_radius: '8px',
+                transparent: true,
+                preview: false,
+              },
+            ],
+          },
+          {
+            tag: 'column',
+            width: 'weighted',
+            weight: 1,
+            vertical_spacing: '2px',
+            elements: [{ tag: 'markdown', content: nameMd }, blurb],
+          },
+        ],
+      }
+    : {
+        tag: 'column_set',
+        flex_mode: 'none',
+        columns: [
+          {
+            tag: 'column',
+            width: 'weighted',
+            weight: 1,
+            vertical_spacing: '4px',
+            elements: [
+              { tag: 'div', text: { tag: 'lark_md', content: nameMd }, icon: categoryIcon(c, null) },
+              blurb,
+            ],
+          },
+        ],
+      };
   return {
     tag: 'interactive_container',
     width: 'fill',
@@ -42,19 +92,8 @@ function entryCell(c: Category, count: number, iconKey: string | null): object {
     border_color: 'cus-line',
     corner_radius: '10px',
     padding: '12px 12px 12px 12px',
-    vertical_spacing: '4px',
     behaviors: [{ type: 'callback', value: { v: 1, a: 'open_portal', cat: c } }],
-    elements: [
-      {
-        tag: 'div',
-        text: {
-          tag: 'lark_md',
-          content: `**<font color='cus-ink'>${CATEGORY_LABEL[c]}</font>** ${muted(String(count))}`,
-        },
-        icon: categoryIcon(c, iconKey),
-      },
-      { tag: 'markdown', content: muted(CATEGORY_BLURB[c]), text_size: 'caption' },
-    ],
+    elements: [inner],
   };
 }
 
@@ -127,7 +166,7 @@ function hotSection(hot: CatalogEntry[], agentCount: number, icons: BannerKeys['
                 width: 'weighted',
                 weight: 1,
                 vertical_align: 'center',
-                elements: [{ tag: 'markdown', content: '热门数字员工', text_size: 'title' }],
+                elements: [{ tag: 'markdown', content: '**热门数字员工**', text_size: 'title' }],
               },
               {
                 tag: 'column',

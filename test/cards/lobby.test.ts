@@ -57,17 +57,19 @@ describe('buildLobbyCard', () => {
     expect(txt[0]).toContain("<font color='cus-muted'>2</font>");
     expect(txt[1]).toContain("<font color='cus-muted'>1</font>");
     expect(txt[3]).toContain("<font color='cus-muted'>0</font>");
-    expect(txt.map((t) => ['帮你干活的 AI 同事', '即装即用的销售技能', '产品、报价、案例一处查', '审批与售前支持'].some((w) => t.includes(w)))).toEqual([true, true, true, true]);
+    expect(txt.map((t) => ['帮你干活的 AI 同事', '即装即用的销售技能', '产品、报价与案例', '审批与售前支持'].some((w) => t.includes(w)))).toEqual([true, true, true, true]);
   });
 
   it('entry cells use the category icon img_key as custom_icon, else standard_icon', () => {
     const icons = { agent: 'ia', skill: null, kb: 'ik', service: null };
     const bn: BannerKeys = { brand: null, category: { agent: null, skill: null, kb: null, service: null }, promoDefault: null, icons };
     const cells = find(buildLobbyCard([e()], dept, { banners: bn }), (o) => o.tag === 'interactive_container' && o.behaviors?.[0]?.value?.cat);
-    const ic = cells.map((x) => x.elements[0].icon);
-    expect(ic[0]).toEqual({ tag: 'custom_icon', img_key: 'ia' });
-    expect(ic[1].tag).toBe('standard_icon');
-    expect(ic[2]).toEqual({ tag: 'custom_icon', img_key: 'ik' });
+    const img = (x: any) => find(x, (o) => o.tag === 'img')[0];
+    expect(img(cells[0])).toMatchObject({ img_key: 'ia', size: 'small', transparent: true, corner_radius: '8px' });
+    expect(cells[0].elements[0].columns[0].width).toBe('auto');
+    expect(find(cells[1], (o) => o.tag === 'img')).toHaveLength(0);
+    expect(find(cells[1], (o) => o.tag === 'standard_icon')).toHaveLength(1);
+    expect(img(cells[2]).img_key).toBe('ik');
   });
 
   it('shows up to 4 hot agents and backfills by order', () => {
@@ -89,12 +91,11 @@ describe('buildLobbyCard', () => {
 
   it('hot section title uses the title size and a text button 「全部 N 个 →」 opening the agent category', () => {
     const c = buildLobbyCard([e({ hot: true }), e(), e({ category: 'skill' })], dept);
-    const title = find(c, (o) => o.tag === 'markdown' && o.content === '热门数字员工')[0];
+    const title = find(c, (o) => o.tag === 'markdown' && o.content === '**热门数字员工**')[0];
     expect(title.text_size).toBe('title');
     const all = find(c, (o) => o.tag === 'button' && o.text.content === '全部 2 个 →')[0];
     expect(all).toMatchObject({ type: 'text', size: 'small' });
     expect(all.behaviors).toEqual([{ type: 'callback', value: { v: 1, a: 'open_portal', cat: 'agent' } }]);
-    expect(json(c)).not.toContain('**热门数字员工**');
   });
 
   it('has the open_portal main button (no cat), large and filled', () => {

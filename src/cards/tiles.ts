@@ -78,6 +78,7 @@ export function entryTile(e: CatalogEntry, iconKey?: string | null): object {
           scale_type: 'crop_center',
           size: 'small',
           corner_radius: '8px',
+          transparent: true,
           preview: false,
         },
       ],
