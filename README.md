@@ -2,17 +2,27 @@
 
 飞书机器人:在群里置顶一张「大厅卡」,点「打开门户」后,按决策 0001 把一张个人门户卡(卡片 JSON 2.0)私聊发给点击人。门户支持四个分类切换、搜索、翻页、Skill 就地展开详情。一期不含路由智能体(二期)。
 
-## 运行
+## 下载后先生成卡片
 
-```
-cp .env.example .env   # 填好各项
-npm install
-npm run dev            # 启动机器人服务(长连接),看到 `portal bot ready` 即就绪
-npm run lobby          # 发送大厅卡到 PORTAL_CHAT_ID 并置顶
+使用 Node.js 24。在仓库根目录运行：
+
+```sh
+npm ci
+npm run cards:preview
 npm test
+npm run typecheck
 ```
 
-**同一应用同一时间只能有一个长连接客户端**:启动 `npm run dev` 前,先停掉其他正在跑的连接进程(包括 spikes 脚本)。
+`npm run cards:preview` 读取 `data/seed-catalog.json`，用正式发卡代码生成大厅卡和数字员工、Skill、知识库、团队服务四张门户卡的 JSON，输出到 `dist/cards/`。可以修改种子目录，或用 `DEPT_NAME`、`DEPT_INTRO` 环境变量覆盖预览标题和简介。预览无需 `.env`，不会访问飞书或发送消息。没有本应用的图片键时会用内置图标并省略头图。目录里的示例链接用于演示卡片结构，真机联调前请换成有效 AppLink 和资源链接。
+
+## 接入飞书测试应用
+
+1. 配置下文的飞书应用权限、事件和菜单。让应用加入测试群，并确认它能读取目标 Base。
+2. 在同一个 Base 准备「能力目录」和「运营位」两张表。「能力目录」按[字段定义](docs/superpowers/plans/2026-11-04-dept-agent-portal-phase1.md#task-2-目录数据模型与记录解析)建表，可参考 `data/seed-catalog.json` 填入记录。「运营位」可先留空，但需要有表 ID。使用运营位时，字段为「标题」「说明」（文本）、「跳转链接」（超链接）、「图片」（附件）、「开始时间」「结束时间」（日期）、「排序」（数字）、「上架」（复选框）。
+3. 运行 `cp -n .env.example .env && chmod 600 .env`，按下表填写应用凭证、两张表的 ID 和测试群 ID。用同一套凭证运行 `npm run banners`，将仓库内附的成品图片上传到自己的应用并生成 `data/banner-keys.json`。图片键由上传应用使用，这个生成文件仅保存在本地。上传后也可重新运行预览命令，导出带图片键的卡片。
+4. 先停掉同一个应用已有的长连接进程（包括 spikes 脚本），再运行 `npm run dev`。看到 `portal bot ready` 后，在另一个终端运行 `npm run lobby`，它会向 `PORTAL_CHAT_ID` 发卡并置顶。随后从测试群点击分类入口或「打开门户」，验证私聊收卡和卡内回调。
+
+默认 `npm test` 不连接飞书。配置好测试应用和测试数据后，可用 `INTEGRATION=1 npm test` 单独验证真实 Base 的读取和运营位附件流程。
 
 ## .env 各项
 
@@ -31,8 +41,8 @@ npm test
 - 权限(scopes):`im:message:send_as_bot`、`im:chat.top_notice:write_only`、`bitable:app:readonly`、`im:resource`、`im:chat.members:read`
 - 回调:`card.action.trigger`;事件:`im.message.receive_v1`、`application.bot.menu_v6`,订阅方式均选「长连接」
 - 机器人菜单:新增「打开门户」,event_key 填 `open_portal`
-- 多维表格:应用按当前共享设置直接读取,无需把应用加为协作者;若以后收紧共享,需把应用加为 Base 协作者
-- 可用范围:目前仅开发者本人可用,正式推广前需放大应用可用范围
+- 多维表格:按目标 Base 的共享设置给测试应用读取权限，必要时将应用添加为 Base 协作者
+- 可用范围:测试时覆盖获准的测试人员，正式推广前再调整
 
 ## 触发方式
 

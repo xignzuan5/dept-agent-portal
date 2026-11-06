@@ -7,6 +7,7 @@
   "scripts": {
     "test": "vitest run",
     "dev": "tsx src/bot/main.ts",
+    "cards:preview": "tsx scripts/preview-cards.ts",
     "lobby": "tsx scripts/send-lobby.ts",
     "banners": "tsx scripts/upload-banners.ts",
     "typecheck": "tsc --noEmit"

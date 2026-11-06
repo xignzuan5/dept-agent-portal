@@ -3,3 +3,5 @@ node_modules/
 .superpowers/
 dist/
 spikes/out/
+
+data/banner-keys.json
