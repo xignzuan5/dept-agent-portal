@@ -22,7 +22,7 @@ npm run typecheck
 3. 运行 `cp -n .env.example .env && chmod 600 .env`，按下表填写应用凭证、两张表的 ID 和测试群 ID。用同一套凭证运行 `npm run banners`，将仓库内附的成品图片上传到自己的应用并生成 `data/banner-keys.json`。图片键由上传应用使用，这个生成文件仅保存在本地。上传后也可重新运行预览命令，导出带图片键的卡片。
 4. 先停掉同一个应用已有的长连接进程（包括 spikes 脚本），再运行 `npm run dev`。看到 `portal bot ready` 后，在另一个终端运行 `npm run lobby`，它会向 `PORTAL_CHAT_ID` 发卡并置顶。随后从测试群点击分类入口或「打开门户」，验证私聊收卡和卡内回调。
 
-默认 `npm test` 不连接飞书。配置好测试应用和测试数据后，可用 `INTEGRATION=1 npm test` 单独验证真实 Base 的读取和运营位附件流程。
+默认 `npm test` 不连接飞书。可选的 `INTEGRATION=1 npm test` 依赖原测试表的固定数据：目录与种子一致，运营位包含指定的在期记录和带附件的过期记录，并会向测试应用上传附件。新建的空运营位表可先用步骤 4 验证收卡和回调。
 
 ## .env 各项
 
